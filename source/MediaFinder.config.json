@@ -1,0 +1,364 @@
+﻿{
+    "autoDetect":  true,
+    "watchPaths":  [
+                       "%USERPROFILE%\\Videos",
+                       "%USERPROFILE%\\Downloads",
+                       "%USERPROFILE%\\Pictures",
+                       "%USERPROFILE%\\Documents\\OBS Studio"
+                   ],
+    "includeFilters":  {},
+    "excludeFilters":  {},
+    "categories":  [
+                       {
+                           "name":  "obs素材",
+                           "keywords":  [
+                                            "obs-studio",
+                                            "obs studio"
+                                        ],
+                           "match":  "path"
+                       },
+                       {
+                           "name":  "原神",
+                           "keywords":  [
+                                            "genshin",
+                                            "genshinimpact",
+                                            "yuanshen",
+                                            "原神"
+                                        ],
+                           "match":  "both"
+                       },
+                       {
+                           "name":  "鸣潮",
+                           "keywords":  [
+                                            "wuthering waves",
+                                            "鸣潮"
+                                        ],
+                           "match":  "both"
+                       },
+                       {
+                           "name":  "明日方舟终末地",
+                           "keywords":  [
+                                            "endfield",
+                                            "endfiled",
+                                            "终末地",
+                                            "明日方舟终末地"
+                                        ],
+                           "match":  "both"
+                       },
+                       {
+                           "name":  "三角洲行动",
+                           "keywords":  [
+                                            "delta force",
+                                            "deltaforce",
+                                            "三角洲"
+                                        ],
+                           "match":  "both"
+                       },
+                       {
+                           "name":  "崩坏星穹铁道",
+                           "keywords":  [
+                                            "star rail",
+                                            "honkai",
+                                            "星穹铁道",
+                                            "崩铁"
+                                        ],
+                           "match":  "both"
+                       },
+                       {
+                           "name":  "崩坏3",
+                           "keywords":  [
+                                            "honkai impact 3",
+                                            "bh3",
+                                            "崩坏3",
+                                            "崩坏三"
+                                        ],
+                           "match":  "both"
+                       },
+                       {
+                           "name":  "绝区零",
+                           "keywords":  [
+                                            "zenless",
+                                            "绝区零"
+                                        ],
+                           "match":  "both"
+                       },
+                       {
+                           "name":  "王者荣耀",
+                           "keywords":  [
+                                            "arena of valor",
+                                            "wangzherongyao",
+                                            "王者荣耀"
+                                        ],
+                           "match":  "both"
+                       },
+                       {
+                           "name":  "和平精英",
+                           "keywords":  [
+                                            "game for peace",
+                                            "和平精英"
+                                        ],
+                           "match":  "both"
+                       },
+                       {
+                           "name":  "英雄联盟",
+                           "keywords":  [
+                                            "league of legends",
+                                            "lol",
+                                            "英雄联盟",
+                                            "lolm"
+                                        ],
+                           "match":  "both"
+                       },
+                       {
+                           "name":  "无畏契约",
+                           "keywords":  [
+                                            "valorant",
+                                            "无畏契约"
+                                        ],
+                           "match":  "both"
+                       },
+                       {
+                           "name":  "永劫无间",
+                           "keywords":  [
+                                            "naraka",
+                                            "永劫无间"
+                                        ],
+                           "match":  "both"
+                       },
+                       {
+                           "name":  "艾尔登法环",
+                           "keywords":  [
+                                            "elden ring",
+                                            "艾尔登法环"
+                                        ],
+                           "match":  "both"
+                       },
+                       {
+                           "name":  "黑神话悟空",
+                           "keywords":  [
+                                            "black myth",
+                                            "wukong",
+                                            "黑神话"
+                                        ],
+                           "match":  "both"
+                       },
+                       {
+                           "name":  "赛博朋克2077",
+                           "keywords":  [
+                                            "cyberpunk",
+                                            "赛博朋克"
+                                        ],
+                           "match":  "both"
+                       },
+                       {
+                           "name":  "GTA侠盗猎车手",
+                           "keywords":  [
+                                            "grand theft auto",
+                                            "gta"
+                                        ],
+                           "match":  "both"
+                       },
+                       {
+                           "name":  "荒野大镖客",
+                           "keywords":  [
+                                            "red dead",
+                                            "荒野大镖客"
+                                        ],
+                           "match":  "both"
+                       },
+                       {
+                           "name":  "使命召唤",
+                           "keywords":  [
+                                            "call of duty",
+                                            "使命召唤",
+                                            "cod"
+                                        ],
+                           "match":  "both"
+                       },
+                       {
+                           "name":  "战地系列",
+                           "keywords":  [
+                                            "battlefield",
+                                            "战地"
+                                        ],
+                           "match":  "both"
+                       },
+                       {
+                           "name":  "守望先锋",
+                           "keywords":  [
+                                            "overwatch",
+                                            "守望先锋"
+                                        ],
+                           "match":  "both"
+                       },
+                       {
+                           "name":  "我的世界",
+                           "keywords":  [
+                                            "minecraft",
+                                            "我的世界"
+                                        ],
+                           "match":  "both"
+                       },
+                       {
+                           "name":  "塞尔达传说",
+                           "keywords":  [
+                                            "zelda",
+                                            "塞尔达"
+                                        ],
+                           "match":  "both"
+                       },
+                       {
+                           "name":  "怪物猎人",
+                           "keywords":  [
+                                            "monster hunter",
+                                            "怪物猎人"
+                                        ],
+                           "match":  "both"
+                       },
+                       {
+                           "name":  "最终幻想",
+                           "keywords":  [
+                                            "final fantasy",
+                                            "最终幻想",
+                                            "ff"
+                                        ],
+                           "match":  "both"
+                       },
+                       {
+                           "name":  "Steam游戏",
+                           "keywords":  [
+                                            "steam",
+                                            "steamapps",
+                                            "steamuserdata"
+                                        ],
+                           "match":  "both"
+                       },
+                       {
+                           "name":  "Epic游戏",
+                           "keywords":  [
+                                            "epic games",
+                                            "epicgames",
+                                            "epic"
+                                        ],
+                           "match":  "both"
+                       },
+                       {
+                           "name":  "剪映",
+                           "keywords":  [
+                                            "capcut",
+                                            "jianying",
+                                            "剪映"
+                                        ],
+                           "match":  "both"
+                       },
+                       {
+                           "name":  "哔哩哔哩",
+                           "keywords":  [
+                                            "bilibili",
+                                            "bili",
+                                            "哔哩"
+                                        ],
+                           "match":  "both"
+                       },
+                       {
+                           "name":  "抖音",
+                           "keywords":  [
+                                            "douyin",
+                                            "tiktok",
+                                            "抖音"
+                                        ],
+                           "match":  "both"
+                       },
+                       {
+                           "name":  "微信",
+                           "keywords":  [
+                                            "wechat",
+                                            "weixin",
+                                            "微信"
+                                        ],
+                           "match":  "both"
+                       },
+                       {
+                           "name":  "QQ",
+                           "keywords":  [
+                                            "qq",
+                                            "qqbot",
+                                            "tencent"
+                                        ],
+                           "match":  "both"
+                       },
+                       {
+                           "name":  "Photoshop",
+                           "keywords":  [
+                                            "photoshop",
+                                            "ps"
+                                        ],
+                           "match":  "both"
+                       },
+                       {
+                           "name":  "Premiere剪辑",
+                           "keywords":  [
+                                            "premiere",
+                                            "adobe",
+                                            "pr"
+                                        ],
+                           "match":  "both"
+                       },
+                       {
+                           "name":  "壁纸收藏",
+                           "keywords":  [
+                                            "wallpaper engine",
+                                            "wallpaperengine",
+                                            "壁纸"
+                                        ],
+                           "match":  "both"
+                       },
+                       {
+                           "name":  "游戏截图",
+                           "keywords":  [
+                                            "screenshot",
+                                            "screenshots",
+                                            "截图"
+                                        ],
+                           "match":  "both"
+                       }
+                   ],
+    "extensions":  {
+                       "video":  [
+                                     ".mp4",
+                                     ".mkv",
+                                     ".mov",
+                                     ".avi",
+                                     ".ts",
+                                     ".flv",
+                                     ".webm",
+                                     ".m4v",
+                                     ".m2ts",
+                                     ".wmv",
+                                     ".mpg",
+                                     ".mpeg"
+                                 ],
+                       "image":  [
+                                     ".png",
+                                     ".jpg",
+                                     ".jpeg",
+                                     ".bmp",
+                                     ".webp",
+                                     ".gif",
+                                     ".tiff",
+                                     ".heic",
+                                     ".jfif"
+                                 ],
+                       "audio":  [
+                                     ".mp3",
+                                     ".flac",
+                                     ".wav",
+                                     ".m4a",
+                                     ".aac",
+                                     ".ogg",
+                                     ".opus",
+                                     ".wma"
+                                 ]
+                   },
+    "refreshInterval":  5
+}

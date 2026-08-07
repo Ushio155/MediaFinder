@@ -1,0 +1,69 @@
+MediaFinder - 第三方组件版权与许可声明
+============================================
+
+本程序内嵌并分发以下第三方组件:
+
+1. Everything (Everything.exe / Everything64.dll)
+   Copyright (C) 2018 David Carpenter
+   许可协议: MIT 许可 (免费软件, 个人与商业使用免费, 允许自由复制、
+   修改与分发, 但分发时必须保留以下版权与许可声明):
+
+   Everything
+     Copyright (C) 2018 David Carpenter
+
+     Permission is hereby granted, free of charge, to any person obtaining
+     a copy of this software and associated documentation files (the
+     "Software"), to deal in the Software without restriction, including
+     without limitation the rights to use, copy, modify, merge, publish,
+     distribute, sublicense, and/or sell copies of the Software, and to
+     permit persons to whom the Software is furnished to do so, subject to
+     the following conditions:
+
+     The above copyright notice and this permission notice shall be
+     included in all copies or substantial portions of the Software.
+
+     THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+     EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+     MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+     NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+     BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+     ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+     CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+     SOFTWARE.
+
+   官方网站: https://www.voidtools.com
+   Everything64.dll 来自 voidtools 官方 SDK。
+   注: voidtools 官方论坛已确认 Everything 采用 MIT 许可, 允许捆绑
+   进其他软件再分发 (论坛主题 "Legal redistribution of Everything",
+   voidtools.com/forum/viewtopic.php?t=6688)。
+
+   另: Everything 二进制内嵌 PCRE 正则库, 一并声明如下:
+
+   Perl-Compatible Regular Expressions
+     Copyright (c) 1997-2012 University of Cambridge
+     Redistribution and use in source and binary forms, with or without
+     modification, are permitted provided that the following conditions
+     are met:
+     * Redistributions of source code must retain the above copyright
+       notice, this list of conditions and the following disclaimer.
+     * Redistributions in binary form must reproduce the above copyright
+       notice, this list of conditions and the following disclaimer in the
+       documentation and/or other materials provided with the distribution.
+     * Neither the name of the University of Cambridge nor the names of
+       its contributors may be used to endorse or promote products derived
+       from this software without specific prior written permission.
+     THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+     "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+     LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+     A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+     OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+     SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+     LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+     DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+     THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+     (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+     OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+2. MediaFinder 本体为使用者自行编写的内部工具。
+   程序本体仅依赖 Windows 系统自带组件 (.NET Framework、PowerShell、
+   WPF、HttpListener 等), 不随程序分发, 无第三方版权负担。

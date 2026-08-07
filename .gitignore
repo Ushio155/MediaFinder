@@ -1,0 +1,19 @@
+# 运行时产物 - 绝不提交
+# Everything.db 是全盘文件索引数据库，含本机所有文件名，严禁公开
+*.db
+*.ini
+*.log
+*.index.json
+*.bak
+
+# 本机运行时目录
+LocalAppData/
+runtime/
+
+# 构建产物
+MediaFinder.exe
+
+# 编辑器/系统
+Thumbs.db
+Desktop.ini
+.DS_Store

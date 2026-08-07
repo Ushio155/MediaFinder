@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MediaFinder · 媒体查找工具</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-theme="light">
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo">🎬</div>
+        <div class="brand-text">
+          <h1>MediaFinder</h1>
+          <p class="subtitle">媒体文件快速查找工具</p>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <span id="monitorBadge" class="badge badge-off">自动刷新关闭</span>
+        <button id="themeBtn" class="btn btn-ghost btn-icon" title="切换明暗模式">🌙</button>
+        <button id="refreshBtn" class="btn btn-ghost btn-icon" title="刷新状态">↻</button>
+        <button id="quitBtn" class="btn btn-ghost" title="关闭网页服务器">关闭服务器</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <aside class="sidebar">
+        <section class="card">
+          <div class="card-head"><span>📊 索引状态</span></div>
+          <div class="stat-row">
+            <div class="stat">
+              <div class="stat-value" id="indexCount">–</div>
+              <div class="stat-label">文件数</div>
+            </div>
+            <div class="stat">
+              <div class="stat-value stat-value-sm" id="indexTime">–</div>
+              <div class="stat-label">索引更新</div>
+            </div>
+          </div>
+          <button id="scanBtn" class="btn btn-primary btn-block">
+            <span class="btn-label">⟳ 重新扫描</span>
+          </button>
+          <div class="hint" id="scanHint"></div>
+        </section>
+
+        <section class="card" id="monitorCard">
+          <div class="card-head"><span id="monitorCardTitle">🔄 自动刷新</span></div>
+          <div class="toggle-row">
+            <span id="monitorText">自动刷新已关闭</span>
+            <label class="switch">
+              <input type="checkbox" id="monitorToggle">
+              <span class="slider"></span>
+            </label>
+          </div>
+          <p class="hint" id="monitorHint">开启后每几秒自动检查监控目录中的新文件并收录（低功耗）</p>
+        </section>
+
+        <section class="card">
+          <div class="card-head"><span>📁 监控目录</span><button id="addPathBtn" class="btn btn-sm btn-primary">＋ 添加目录</button></div>
+          <ul class="path-list" id="pathList"></ul>
+          <p class="hint">不知道路径也没关系，点「添加目录」可智能搜索或浏览查找</p>
+        </section>
+      </aside>
+
+      <section class="main">
+        <div class="card search-card">
+          <div class="search-row">
+            <input id="kwInput" type="text" placeholder="输入关键字搜索…" autocomplete="off" spellcheck="false">
+            <select id="typeSelect">
+              <option value="">全部类型</option>
+              <option value="video">🎥 视频</option>
+              <option value="image">🖼️ 图片</option>
+              <option value="audio">🎵 音频</option>
+            </select>
+            <select id="sinceSelect">
+              <option value="">不限时间</option>
+              <option value="24h">最近 24 小时</option>
+              <option value="7d">最近 7 天</option>
+              <option value="30d">最近 30 天</option>
+              <option value="90d">最近 90 天</option>
+            </select>
+            <button id="searchBtn" class="btn btn-primary">搜索</button>
+          </div>
+          <div class="search-toolbar">
+            <div class="search-meta" id="searchMeta"></div>
+            <div class="group-actions" id="groupActions" style="display:none">
+              <button id="expandAllBtn" class="btn btn-sm">全部展开</button>
+              <button id="collapseAllBtn" class="btn btn-sm">全部折叠</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="results" id="results">
+          <div class="empty-state" id="emptyState">
+            <div class="empty-icon">🔍</div>
+            <p>输入关键字，开始查找你的媒体文件</p>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal-mask" id="addModal" style="display:none">
+    <div class="modal">
+      <div class="modal-head">
+        <h3>➕ 添加搜索目录</h3>
+        <button class="btn btn-ghost btn-icon" id="modalClose" title="关闭">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="add-section">
+          <label class="add-label">智能搜索 <span class="hint-inline">不知道路径？输入游戏/软件名帮你找</span></label>
+          <div class="add-row">
+            <input id="suggestKw" placeholder="例如：无畏契约 / Valorant / 原神" autocomplete="off">
+            <button class="btn btn-primary btn-sm" id="suggestBtn">搜索</button>
+          </div>
+          <div class="suggest-list" id="suggestList"></div>
+        </div>
+        <div class="add-divider"><span>或手动浏览文件夹</span></div>
+        <div class="add-section">
+          <div class="browse-path" id="browsePath">请选择位置…</div>
+          <div class="browse-actions">
+            <button class="btn btn-sm" id="browseUp" disabled>⬆ 上一级</button>
+            <button class="btn btn-sm btn-primary" id="browseAdd" disabled>＋ 添加此目录</button>
+          </div>
+          <div class="browse-list" id="browseList"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <script src="app.js"></script>
+</body>
+</html>
