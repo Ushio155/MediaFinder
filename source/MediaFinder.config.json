@@ -4,7 +4,8 @@
                        "%USERPROFILE%\\Videos",
                        "%USERPROFILE%\\Downloads",
                        "%USERPROFILE%\\Pictures",
-                       "%USERPROFILE%\\Documents\\OBS Studio"
+                       "%USERPROFILE%\\Documents\\OBS Studio",
+                       "%USERPROFILE%\\Music"
                    ],
     "includeFilters":  {},
     "excludeFilters":  {},

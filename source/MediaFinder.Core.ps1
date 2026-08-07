@@ -19,7 +19,8 @@ function Get-Config {
             '%USERPROFILE%\Videos',
             '%USERPROFILE%\Downloads',
             '%USERPROFILE%\Pictures',
-            '%USERPROFILE%\Documents\OBS Studio'
+            '%USERPROFILE%\Documents\OBS Studio',
+            '%USERPROFILE%\Music'
         )
         extensions = [ordered]@{
             video = @('.mp4','.mkv','.mov','.avi','.ts','.flv','.webm','.m4v','.m2ts','.wmv','.mpg','.mpeg')
@@ -103,7 +104,7 @@ function Resolve-WatchConfig($cfg) {
     }
     if ($cfg.autoDetect -ne $false) {
         $u = $env:USERPROFILE
-        foreach ($sub in 'Videos','Downloads','Pictures') {
+        foreach ($sub in 'Videos','Downloads','Pictures','Music') {
             $ap = Join-Path $u $sub
             if (Test-Path -LiteralPath $ap) { Add-Entry $ap @() @() }
         }
