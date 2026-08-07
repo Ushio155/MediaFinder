@@ -1,5 +1,7 @@
 # MediaFinder
 
+[English](README_EN.md) | 简体中文
+
 基于 Everything 高速索引的本地媒体素材管理工具。双击即用：自动拉起内置 Everything、自动索引、自动打开网页控制台，毫秒级搜索、实时更新。
 
 ## 功能
