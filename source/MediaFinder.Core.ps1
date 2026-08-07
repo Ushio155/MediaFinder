@@ -8,7 +8,9 @@ function Get-Config {
     if (-not $ConfigPath) { $ConfigPath = Join-Path (Get-ScriptDir) 'MediaFinder.config.json' }
     $script:CfgPath = $ConfigPath
     if (Test-Path -LiteralPath $ConfigPath) {
-        return (Get-Content -LiteralPath $ConfigPath -Raw -Encoding UTF8 | ConvertFrom-Json)
+        $c = Get-Content -LiteralPath $ConfigPath -Raw -Encoding UTF8 | ConvertFrom-Json
+        if ($null -eq $c.ignoredPrivacyDirs) { $c | Add-Member -NotePropertyName ignoredPrivacyDirs -NotePropertyValue @() -Force }
+        return $c
     }
     $u = $env:USERPROFILE
     $defaults = [ordered]@{
@@ -32,6 +34,7 @@ function Get-Config {
         autoStartEverything = $true
         autostartEverythingOnBoot = $true
         stopEverythingOnExit = $false
+        ignoredPrivacyDirs = @()
         indexFile = (Join-Path (Get-ScriptDir) 'MediaFinder.index.json')
     }
     $defaults | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $ConfigPath -Encoding UTF8
@@ -126,6 +129,26 @@ function Resolve-WatchConfig($cfg) {
         if (Test-Path -LiteralPath $jyDraft) { Add-Entry $jyDraft @() @() }
     }
     return ,$entries
+}
+
+function Find-PrivacyDirs($cfg) {
+    $docs = Join-Path $env:USERPROFILE 'Documents'
+    $cands = @(
+        @{ Kind = '微信'; Path = (Join-Path $docs 'WeChat Files');   Hint = '微信聊天中接收的文件' },
+        @{ Kind = '微信'; Path = (Join-Path $docs 'xwechat_files');  Hint = '微信(新版)聊天中接收的文件' },
+        @{ Kind = 'QQ';   Path = (Join-Path $docs 'Tencent Files');  Hint = 'QQ/TIM 聊天中接收的文件' }
+    )
+    $ignored = @(@($cfg.ignoredPrivacyDirs) | Where-Object { $_ })
+    $current = @((Resolve-WatchConfig $cfg) | ForEach-Object { $_.Path })
+    $res = New-Object System.Collections.ArrayList
+    foreach ($c in $cands) {
+        $rp = [Environment]::ExpandEnvironmentVariables([string]$c.Path)
+        if (-not $rp -or -not (Test-Path -LiteralPath $rp)) { continue }
+        if ($ignored -contains $rp) { continue }
+        if ($current -contains $rp) { continue }
+        $res.Add([pscustomobject]@{ kind = $c.Kind; path = $rp; hint = $c.Hint }) | Out-Null
+    }
+    return ,@($res)
 }
 
 function Get-EntryForPath($entries, $fullPath) {

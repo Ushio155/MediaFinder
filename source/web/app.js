@@ -10,6 +10,7 @@ const els = {
   monitorText: $('monitorText'),
   monitorToggle: $('monitorToggle'),
   pathList: $('pathList'),
+  privacyNote: $('privacyNote'),
   kwInput: $('kwInput'),
   typeSelect: $('typeSelect'),
   sinceSelect: $('sinceSelect'),
@@ -116,6 +117,7 @@ async function fetchStatus(silent) {
     els.indexTime.textContent = (s.index && s.index.live) ? '实时更新' : fmtTime(s.index && s.index.modified);
     setMonitorUI(s.monitor, currentIndexMode);
     renderPaths(s.watchPaths || []);
+    renderPrivacyDirs(s.privacyDirs || []);
     return s;
   } catch (e) {
     if (!silent) toast('无法连接服务器', true);
@@ -442,6 +444,50 @@ async function removePath(path) {
   } catch (e) {
     toast('移除失败', true);
   }
+}
+async function ignorePrivacy(path) {
+  try {
+    const r = await api('/api/config/ignore-privacy', { path });
+    toast('已记住，不再提示该目录');
+    renderPrivacyDirs(r.privacyDirs || []);
+  } catch (e) {
+    toast('操作失败', true);
+  }
+}
+function renderPrivacyDirs(dirs) {
+  const box = els.privacyNote;
+  box.innerHTML = '';
+  if (!dirs || !dirs.length) return;
+  const kinds = [...new Set(dirs.map((d) => d.kind))].join('/');
+  const title = document.createElement('div');
+  title.className = 'privacy-note-title';
+  title.textContent = '📩 检测到' + kinds + '接收目录';
+  box.appendChild(title);
+  dirs.forEach((d) => {
+    const p = document.createElement('span');
+    p.className = 'privacy-note-path';
+    p.textContent = d.path;
+    p.title = d.path + '（点击展开/收起完整路径）';
+    p.addEventListener('click', (e) => e.currentTarget.classList.toggle('expanded'));
+    box.appendChild(p);
+    const hint = document.createElement('div');
+    hint.className = 'privacy-note-hint';
+    hint.textContent = '该目录含' + d.hint + '，是否纳入监控？纳入后搜索结果中会出现其中内容。';
+    box.appendChild(hint);
+  });
+  const actions = document.createElement('div');
+  actions.className = 'privacy-actions';
+  const addBtn = document.createElement('button');
+  addBtn.className = 'privacy-btn privacy-btn-primary';
+  addBtn.textContent = '纳入监控';
+  addBtn.addEventListener('click', () => addPath(dirs[0].path));
+  const noBtn = document.createElement('button');
+  noBtn.className = 'privacy-btn';
+  noBtn.textContent = '不再提示';
+  noBtn.addEventListener('click', () => ignorePrivacy(dirs[0].path));
+  actions.appendChild(addBtn);
+  actions.appendChild(noBtn);
+  box.appendChild(actions);
 }
 els.addPathBtn.addEventListener('click', openAddModal);
 els.modalClose.addEventListener('click', closeAddModal);

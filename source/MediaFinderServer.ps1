@@ -410,6 +410,7 @@ function Handle-Request($ctx) {
             ok = $true
             indexMode = $script:IndexMode
             watchPaths = @((Resolve-WatchConfig $cfg) | Where-Object { Test-Path -LiteralPath $_.Path } | ForEach-Object { $_.Path })
+            privacyDirs = @(Find-PrivacyDirs $cfg | ForEach-Object { $_ })
             index = Get-IndexStats $cfg
             monitor = Get-MonitorState
             configFile = $script:CfgPath
@@ -474,6 +475,21 @@ function Handle-Request($ctx) {
         $cfg2.watchPaths = @(@($cfg2.watchPaths) | Where-Object { $_ -ne $p })
         Save-ConfigFile $cfg2 $script:CfgPath
         Send-Json $ctx ([pscustomobject]@{ ok = $true; message = "已移除目录: $p"; watchPaths = @($cfg2.watchPaths) })
+        return
+    }
+
+    if ($path -eq '/api/config/ignore-privacy' -and $method -eq 'POST') {
+        $body = Read-Body $ctx
+        $p = if ($body) { [string]$body.path } else { '' }
+        if ($p) {
+            $cfg2 = Get-Config $script:CfgPath
+            $cfg2.ignoredPrivacyDirs = @(@($cfg2.ignoredPrivacyDirs) + @($p) | Select-Object -Unique)
+            Save-ConfigFile $cfg2 $script:CfgPath
+            Send-Json $ctx ([pscustomobject]@{ ok = $true; message = "已忽略该目录: $p"; privacyDirs = @(Find-PrivacyDirs $cfg2 | ForEach-Object { $_ }) })
+        }
+        else {
+            Send-Json $ctx ([pscustomobject]@{ ok = $false; error = "缺少 path 参数" })
+        }
         return
     }
 
