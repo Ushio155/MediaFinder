@@ -117,7 +117,13 @@ function Resolve-WatchConfig($cfg) {
                     elseif ($g -eq 'obs-studio') { Add-Entry $gp @() @('\data\','\bin\','\obs-plugins\') }
                 }
             }
+            foreach ($s in 'Videos','Music') {
+                $dp = Join-Path $d $s
+                if (Test-Path -LiteralPath $dp) { Add-Entry $dp @() @() }
+            }
         }
+        $jyDraft = Join-Path $env:LOCALAPPDATA 'JianyingPro\User Data\Projects\com.lveditor.draft'
+        if (Test-Path -LiteralPath $jyDraft) { Add-Entry $jyDraft @() @() }
     }
     return ,$entries
 }
