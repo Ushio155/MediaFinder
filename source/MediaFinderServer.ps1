@@ -391,6 +391,29 @@ function Get-PathSuggestions($keyword) {
 }
 
 function Handle-Request($ctx) {
+    # 反 CSRF: 仅允许本机来源 (localhost/127.0.0.1/[::1])
+    try {
+        $hostHdr = [string]$ctx.Request.Headers['Host']
+        if ($hostHdr) {
+            $hn = ($hostHdr -split ':')[0].Trim().Trim('[', ']').ToLower()
+            if ($hn -and $hn -notin @('localhost', '127.0.0.1', '::1')) { Send-Empty $ctx 403; return }
+        }
+        $origin = [string]$ctx.Request.Headers['Origin']
+        if ($origin) {
+            $oh = $null
+            try { $oh = [System.Uri]$origin } catch { $oh = $null }
+            $ohn = if ($oh) { $oh.Host.Trim().Trim('[', ']').ToLower() } else { '' }
+            if ($ohn -and $ohn -notin @('localhost', '127.0.0.1', '::1')) { Send-Empty $ctx 403; return }
+        }
+        $referer = [string]$ctx.Request.Headers['Referer']
+        if ($referer) {
+            $rh = $null
+            try { $rh = [System.Uri]$referer } catch { $rh = $null }
+            $rhn = if ($rh) { $rh.Host.Trim().Trim('[', ']').ToLower() } else { '' }
+            if ($rhn -and $rhn -notin @('localhost', '127.0.0.1', '::1')) { Send-Empty $ctx 403; return }
+        }
+    }
+    catch { Send-Empty $ctx 403; return }
     $cfg = Get-Config $script:CfgPath
     $extMap = Build-ExtMap $cfg
     $url = $ctx.Request.Url
@@ -604,7 +627,9 @@ function Handle-Request($ctx) {
     if ($path -eq '/api/openfile' -and $method -eq 'POST') {
         $body = Read-Body $ctx
         $target = if ($body) { [string]$body.path } else { '' }
-        if ($target -and (Test-Path -LiteralPath $target)) {
+        $openExts = @('.mp4','.mkv','.mov','.avi','.ts','.flv','.webm','.m4v','.m2ts','.wmv','.mpg','.mpeg','.png','.jpg','.jpeg','.bmp','.webp','.gif','.tiff','.heic','.jfif','.mp3','.flac','.wav','.m4a','.aac','.ogg','.opus','.wma')
+        $oe = [IO.Path]::GetExtension($target).ToLower()
+        if ($target -and (Test-Path -LiteralPath $target -PathType Leaf) -and $openExts -contains $oe) {
             Start-Process -FilePath $target -ErrorAction SilentlyContinue
         }
         Send-Json $ctx ([pscustomobject]@{ ok = $true })

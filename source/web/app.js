@@ -202,7 +202,7 @@ function showEmpty(text, icon) {
   els.groupActions.style.display = 'none';
   const div = document.createElement('div');
   div.className = 'empty-state';
-  div.innerHTML = `<div class="empty-icon">${icon}</div><p>${text}</p>`;
+  div.innerHTML = `<div class="empty-icon">${escapeHtml(icon)}</div><p>${escapeHtml(text)}</p>`;
   els.results.appendChild(div);
 }
 
