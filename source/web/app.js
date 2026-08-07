@@ -50,6 +50,7 @@ els.themeBtn.addEventListener('click', () => {
 
 let toastTimer = null;
 let currentGroups = [];
+let currentCatCounts = {};
 let currentIndexMode = 'ps';
 function toast(msg, isErr = false) {
   els.toast.textContent = msg;
@@ -240,8 +241,10 @@ async function doSearch() {
   els.searchBtn.disabled = true;
   els.searchMeta.textContent = '搜索中…';
   try {
-    const r = await api('/api/search', { keyword: kw, type, since, limit: 500 });
-    els.searchMeta.textContent = r.total ? `共找到 ${r.total} 个文件（显示前 ${Math.min(r.total, 500)} 个）` : '';
+    const r = await api('/api/search', { keyword: kw, type, since, perCat: 100 });
+    currentCatCounts = {};
+    (r.categories || []).forEach((c) => { currentCatCounts[c.name] = c.count; });
+    els.searchMeta.textContent = r.total ? `共找到 ${r.total} 个文件（每分类显示前 100 个）` : '';
     renderResults(r.results || [], kw);
   } catch (e) {
     els.searchMeta.textContent = '';
@@ -276,7 +279,8 @@ function renderResults(items, kw) {
     const header = document.createElement('div');
     header.className = 'group-header';
     header.title = '点击折叠/展开';
-    header.innerHTML = `<span class="chevron">▾</span><span>${escapeHtml(cat)}</span><span class="group-count">${groupItems.length}</span>`;
+    const realCount = currentCatCounts[cat] != null ? currentCatCounts[cat] : groupItems.length;
+    header.innerHTML = `<span class="chevron">▾</span><span>${escapeHtml(cat)}</span><span class="group-count" title="共 ${realCount} 个">${realCount}</span>`;
     const body = document.createElement('div');
     body.className = 'group-items';
     groupItems.forEach((it) => {
@@ -419,9 +423,11 @@ async function doSuggest() {
     els.suggestBtn.disabled = false;
   }
 }
-async function addPath(path) {
+async function addPath(path, excludes) {
   try {
-    const r = await api('/api/config/add', { path });
+    const body = { path };
+    if (excludes && excludes.length) body.exclude = excludes;
+    const r = await api('/api/config/add', body);
     if (r.ok) {
       toast('已添加目录，正在扫描…');
       closeAddModal();
@@ -472,7 +478,7 @@ function renderPrivacyDirs(dirs) {
     box.appendChild(p);
     const hint = document.createElement('div');
     hint.className = 'privacy-note-hint';
-    hint.textContent = '该目录含' + d.hint + '，是否纳入监控？纳入后搜索结果中会出现其中内容。';
+    hint.textContent = '该目录含' + d.hint + '。纳入监控时将自动排除聊天缓存，仅收录接收的文件，是否纳入？';
     box.appendChild(hint);
   });
   const actions = document.createElement('div');
@@ -480,7 +486,7 @@ function renderPrivacyDirs(dirs) {
   const addBtn = document.createElement('button');
   addBtn.className = 'privacy-btn privacy-btn-primary';
   addBtn.textContent = '纳入监控';
-  addBtn.addEventListener('click', () => addPath(dirs[0].path));
+  addBtn.addEventListener('click', () => addPath(dirs[0].path, dirs[0].excludes || []));
   const noBtn = document.createElement('button');
   noBtn.className = 'privacy-btn';
   noBtn.textContent = '不再提示';

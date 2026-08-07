@@ -456,9 +456,19 @@ function Handle-Request($ctx) {
     if ($path -eq '/api/config/add' -and $method -eq 'POST') {
         $body = Read-Body $ctx
         $p = if ($body) { [string]$body.path } else { '' }
+        $exc = @()
+        if ($body -and $body.exclude) { $exc = @($body.exclude | ForEach-Object { [string]$_ }) }
         if ($p -and (Test-Path -LiteralPath $p)) {
             $cfg2 = Get-Config $script:CfgPath
             $cfg2.watchPaths = @(@($cfg2.watchPaths) + @($p) | Select-Object -Unique)
+            if ($exc.Count -gt 0) {
+                $flt = @{}
+                if ($cfg2.excludeFilters) {
+                    foreach ($prop in $cfg2.excludeFilters.PSObject.Properties) { $flt[$prop.Name] = @($prop.Value) }
+                }
+                $flt["$p"] = @($exc)
+                $cfg2.excludeFilters = $flt
+            }
             Save-ConfigFile $cfg2 $script:CfgPath
             Send-Json $ctx ([pscustomobject]@{ ok = $true; message = "已添加目录: $p"; watchPaths = @($cfg2.watchPaths) })
         }
@@ -516,11 +526,11 @@ function Handle-Request($ctx) {
             $kw = if ($body -and $body.keyword) { [string]$body.keyword } else { $null }
             $tp = if ($body -and $body.type) { [string]$body.type } else { $null }
             $sinceStr = if ($body -and $body.since) { [string]$body.since } else { $null }
-            $limit = if ($body -and $body.limit) { [int]$body.limit } else { 500 }
+            $perCat = if ($body -and $body.perCat) { [int]$body.perCat } else { 100 }
             $sinceD = Convert-ToDate $sinceStr $true
             if ($script:IndexMode -eq 'everything') {
                 $entries = Resolve-WatchConfig $cfg
-                $res = @(Search-Everything $cfg $extMap $entries $kw $tp $sinceD $limit)
+                $res = @(Search-Everything $cfg $extMap $entries $kw $tp $sinceD 50000)
                 $items = @()
                 foreach ($x in $res) {
                     $items += [pscustomobject]@{
@@ -532,19 +542,19 @@ function Handle-Request($ctx) {
                         category = Get-Category $cfg $x.FullPath
                     }
                 }
+                $q = Apply-CategoryQuota $items $cfg $perCat
                 Send-Json $ctx ([pscustomobject]@{
                     ok = $true
-                    total = $res.Count
-                    results = @($items)
+                    total = $q.Total
+                    categories = @($q.Categories)
+                    results = @($q.Items)
                 })
                 return
             }
             $list = Load-Index (Get-IndexFile $cfg)
             $res = Invoke-Search $list $kw $tp $sinceD $null $null
             $items = @()
-            $n = 0
             foreach ($x in $res) {
-                if ($n -ge $limit) { break }
                 $items += [pscustomobject]@{
                     name = $x.Name
                     type = $x.Type
@@ -553,13 +563,15 @@ function Handle-Request($ctx) {
                     path = $x.FullPath
                     category = Get-Category $cfg $x.FullPath
                 }
-                $n++
             }
+            $q = Apply-CategoryQuota $items $cfg $perCat
             Send-Json $ctx ([pscustomobject]@{
                 ok = $true
-                total = $res.Count
-                results = @($items)
+                total = $q.Total
+                categories = @($q.Categories)
+                results = @($q.Items)
             })
+            return
         }
         catch {
             Send-Json $ctx ([pscustomobject]@{ ok = $false; error = $_.Exception.Message })

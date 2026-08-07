@@ -146,9 +146,32 @@ function Find-PrivacyDirs($cfg) {
         if (-not $rp -or -not (Test-Path -LiteralPath $rp)) { continue }
         if ($ignored -contains $rp) { continue }
         if ($current -contains $rp) { continue }
-        $res.Add([pscustomobject]@{ kind = $c.Kind; path = $rp; hint = $c.Hint }) | Out-Null
+        $res.Add([pscustomobject]@{ kind = $c.Kind; path = $rp; hint = $c.Hint; excludes = @(Get-PrivacyExcludes $c.Kind) }) | Out-Null
     }
     return ,@($res)
+}
+
+function Get-PrivacyExcludes($kind) {
+    switch ([string]$kind) {
+        'QQ' {
+            return @(
+                '\Image\', '\Video\', '\thumb\', '\FileCache\',
+                '\nt_data\Pic\', '\nt_data\avatar\', '\nt_data\Emoji\', '\nt_data\Ptt\',
+                '\nt_data\msf\', '\nt_data\mmkv\', '\nt_data\flashfransfer\', '\nt_data\ams\',
+                '\nt_data\dataline\', '\nt_data\log', '\nt_data\OnlineStatus\', '\nt_data\UnitedConfig\',
+                '\nt_data\VasUpdateSystem\', '\nt_data\PokeFace\', '\nt_data\WeatherBgCache\',
+                '\nt_db\', '\nt_temp\', '\Thumb\', '\ThumbTemp\'
+            )
+        }
+        '微信' {
+            return @(
+                '\cache\', '\WeAppIcon\', '\avatar\',
+                '\msg\image\', '\msg\video\', '\msg\voice\', '\msg\attach\', '\msg\emoji\', '\msg\applet\', '\msg\backup\',
+                '\FileStorage\Cache\', '\FileStorage\Image\', '\FileStorage\Video\', '\FileStorage\MsgAttach\'
+            )
+        }
+        default { return @() }
+    }
 }
 
 function Get-EntryForPath($entries, $fullPath) {
@@ -279,6 +302,32 @@ function Get-Category($cfg, $fullPath) {
         }
     }
     return $null
+}
+
+function Apply-CategoryQuota($items, $cfg, $perCat) {
+    if ($null -eq $perCat -or $perCat -le 0) { $perCat = 100 }
+    $groups = @{}
+    $counts = @{}
+    foreach ($it in @($items)) {
+        $cat = $it.category
+        if (-not $cat) { $cat = '其他' }
+        if (-not $groups.ContainsKey($cat)) { $groups[$cat] = New-Object System.Collections.ArrayList; $counts[$cat] = 0 }
+        $counts[$cat]++
+        if ($groups[$cat].Count -lt $perCat) { [void]$groups[$cat].Add($it) }
+    }
+    $cats = @($groups.Keys | Sort-Object)
+    if ($cats -contains '其他') {
+        $cats = @($cats | Where-Object { $_ -ne '其他' }) + @('其他')
+    }
+    $out = New-Object System.Collections.ArrayList
+    foreach ($c in $cats) {
+        foreach ($it in $groups[$c]) { [void]$out.Add($it) }
+    }
+    return [pscustomobject]@{
+        Total = @($items).Count
+        Categories = @($cats | ForEach-Object { [pscustomobject]@{ name = $_; count = $counts[$_] } })
+        Items = @($out)
+    }
 }
 
 function Invoke-Search($list, $keyword, $type, $since, $from, $to) {
