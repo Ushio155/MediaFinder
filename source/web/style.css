@@ -90,6 +90,7 @@ body[data-theme="dark"] {
 
 /* ---------- Layout ---------- */
 .layout { display: grid; grid-template-columns: 300px 1fr; gap: 20px; align-items: start; }
+.layout > * { min-width: 0; }
 @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
 
 /* ---------- Cards ---------- */
@@ -142,7 +143,7 @@ body[data-theme="dark"] {
 }
 .path-list li::before { content: "📁"; font-size: 12px; }
 .path-item .path-text {
-  flex: 1; min-width: 0;
+  flex: 1; min-width: 0; max-width: 210px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   cursor: pointer;
 }
