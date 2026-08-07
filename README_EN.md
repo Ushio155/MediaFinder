@@ -10,6 +10,8 @@ A local media asset management tool powered by the Everything search engine. Dou
 - Auto-generated video thumbnails
 - Dark / light theme
 - Falls back to traditional disk scanning if Everything is unavailable
+- Privacy: when WeChat/QQ receive folders are detected, a prominent notice shows the full path and lets you decide whether to monitor them; opting in automatically excludes chat caches (images/videos/stickers/thumbnails/decorations etc.) and keeps only received files; "don't ask again" is remembered permanently
+- Category quota: each category shows up to 100 items so no category can be crowded out by bulk results; category headers and totals show real counts
 
 ## Quick Start
 
