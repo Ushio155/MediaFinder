@@ -141,7 +141,14 @@ body[data-theme="dark"] {
   margin-bottom: 6px;
 }
 .path-list li::before { content: "📁"; font-size: 12px; }
-.path-item .path-text { flex: 1; min-width: 0; }
+.path-item .path-text {
+  flex: 1; min-width: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  cursor: pointer;
+}
+.path-item .path-text.expanded {
+  white-space: normal; word-break: break-all;
+}
 .path-del {
   flex: 0 0 auto; border: none; background: transparent; color: var(--text-dim);
   cursor: pointer; font-size: 12px; padding: 2px 4px; border-radius: 5px;

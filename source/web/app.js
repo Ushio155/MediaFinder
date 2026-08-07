@@ -128,7 +128,12 @@ function renderPaths(paths) {
   paths.forEach((p) => {
     const li = document.createElement('li');
     li.className = 'path-item';
-    li.innerHTML = `<span class="path-text">${escapeHtml(p)}</span>`;
+    const text = document.createElement('span');
+    text.className = 'path-text';
+    text.textContent = p;
+    text.title = p + '（点击展开/收起完整路径）';
+    text.addEventListener('click', (e) => e.currentTarget.classList.toggle('expanded'));
+    li.appendChild(text);
     const del = document.createElement('button');
     del.className = 'path-del';
     del.title = '移除该目录';
