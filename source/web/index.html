@@ -62,6 +62,21 @@
           <ul class="path-list" id="pathList"></ul>
           <p class="hint">不知道路径也没关系，点「添加目录」可智能搜索或浏览查找</p>
         </section>
+
+        <section class="card">
+          <div class="card-head">
+            <span>📜 活动日志</span>
+            <span class="log-tools">
+              <button id="logPrevBtn" class="icon-btn-sm" title="前一天">◀</button>
+              <span id="logDate" class="log-date" title="点击回到今天">今天</span>
+              <button id="logNextBtn" class="icon-btn-sm" title="后一天">▶</button>
+              <button id="logRunBtn" class="btn btn-sm" title="立即检测一次">⟳ 检测</button>
+              <label class="switch log-switch"><input type="checkbox" id="logToggle"><span class="slider"></span></label>
+            </span>
+          </div>
+          <ul class="log-list" id="logList"></ul>
+          <p class="hint" id="logHint">检测新增、移动与消失的媒体文件（可能移入回收站或未监控目录）</p>
+        </section>
       </aside>
 
       <section class="main">

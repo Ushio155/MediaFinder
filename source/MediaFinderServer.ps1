@@ -190,7 +190,10 @@ function Get-IndexStats($cfg) {
 }
 
 $script:PollerScript = {
-    param($core, $cfgPath, $interval, $state)
+    $core = $args[0]
+    $cfgPath = $args[1]
+    $interval = $args[2]
+    $state = $args[3]
     . $core
     $known = @{}
     $list = New-Object System.Collections.ArrayList
@@ -234,8 +237,82 @@ $script:PollerScript = {
                 }
             }
             if ($changed) { Save-Index $idxPath $list }
+            if ($changed) {
+                try {
+                    $c2 = Get-Config $cfgPath
+                    $em2 = Build-ExtMap $c2
+                    if ($c2.logEnabled -ne $false) { [void](Sync-MediaLogs $c2 $em2 $false) }
+                }
+                catch {}
+            }
         }
         catch {}
+    }
+}
+
+$script:LogMonitorScript = {
+    $core = $args[0]
+    $cfgPath = $args[1]
+    $interval = $args[2]
+    $state = $args[3]
+    . $core
+    $esDll = [string]$env:MF_ES_DLL
+    if ($esDll -and (Test-Path -LiteralPath $esDll)) {
+        try {
+            $script:EsDll = $esDll
+            $escaped = $esDll.Replace('\', '\\').Replace('"', '\"')
+            $src = (Get-EsCSharpSource).Replace('%DLL%', $escaped)
+            Add-Type -TypeDefinition $src
+            $script:EsAvailable = [MFEs]::Available()
+        }
+        catch { $script:EsAvailable = $false }
+    }
+    while ($state.Running) {
+        Start-Sleep -Seconds $interval
+        if (-not $state.Running) { break }
+        try {
+            $cfg = Get-Config $cfgPath
+            $extMap = Build-ExtMap $cfg
+            if ($cfg.logEnabled -eq $false) { continue }
+            [void](Sync-MediaLogs $cfg $extMap $true)
+        }
+        catch {}
+    }
+}
+
+function Start-LogMonitor {
+    if ($script:LogMonitorPS) { return }
+    if ($script:IndexMode -ne 'everything') { return }
+    $cfgL = Get-Config $script:CfgPath
+    if ($cfgL.logEnabled -eq $false) {
+        Log "活动日志: 已停用"
+        return
+    }
+    $core = Join-Path $script:ServerDir 'MediaFinder.Core.ps1'
+    $cfgPath = $script:CfgPath
+    $interval = 30
+    if ($null -ne $cfgL.logIntervalSeconds) { $interval = [int]$cfgL.logIntervalSeconds }
+    if ($interval -lt 5) { $interval = 5 }
+    try { Clean-LogFiles $cfgL } catch {}
+    $state = [System.Collections.Hashtable]::Synchronized(@{ Running = $true })
+    $script:LogMonitorState = $state
+    $script:LogMonitorPS = [System.Management.Automation.PowerShell]::Create()
+    $esDllArg = Join-Path $script:ServerDir 'Everything64.dll'
+    if (-not (Test-Path -LiteralPath $esDllArg)) { $esDllArg = [string]$script:EsDll }
+    $env:MF_ES_DLL = $esDllArg
+    [void]$script:LogMonitorPS.AddScript($script:LogMonitorScript).AddArgument($core).AddArgument($cfgPath).AddArgument($interval).AddArgument($state)
+    [void]$script:LogMonitorPS.BeginInvoke()
+    Log "活动日志监控已启动 (间隔 ${interval}秒, dll=$esDllArg)"
+}
+
+function Stop-LogMonitor {
+    if ($script:LogMonitorState) { $script:LogMonitorState.Running = $false }
+    $ps = $script:LogMonitorPS
+    $script:LogMonitorPS = $null
+    $script:LogMonitorState = $null
+    if ($ps) {
+        try { $ps.Stop() } catch {}
+        try { $ps.Dispose() } catch {}
     }
 }
 
@@ -526,10 +603,68 @@ function Handle-Request($ctx) {
         return
     }
 
+    if ($path -eq '/api/logs' -and $method -eq 'GET') {
+        $date = $null
+        $q = $url.Query
+        if ($q) {
+            foreach ($part in ($q.TrimStart('?') -split '&')) {
+                $kv = $part -split '=', 2
+                if ($kv.Count -eq 2 -and $kv[0] -eq 'date') { $date = [System.Uri]::UnescapeDataString($kv[1]) }
+            }
+        }
+        $snapP = Get-LogSnapshotPath $cfg
+        $lastCheck = $null
+        if (Test-Path -LiteralPath $snapP) {
+            $lastCheck = (Get-Item -LiteralPath $snapP).LastWriteTime.ToString('HH:mm:ss')
+        }
+        Send-Json $ctx ([pscustomobject]@{
+            ok = $true
+            date = if ($date) { $date } else { (Get-Date).ToString('yyyy-MM-dd') }
+            enabled = ($cfg.logEnabled -ne $false)
+            lastCheck = $lastCheck
+            logs = @(Read-LogFile $cfg $date 300 | ForEach-Object { $_ })
+        })
+        return
+    }
+
+    if ($path -eq '/api/logs/dates' -and $method -eq 'GET') {
+        Send-Json $ctx ([pscustomobject]@{ ok = $true; dates = @(Get-LogDates $cfg | ForEach-Object { $_ }) })
+        return
+    }
+
+    if ($path -eq '/api/logs/run' -and $method -eq 'POST') {
+        try {
+            $le = @(Sync-MediaLogs $cfg $extMap ($script:IndexMode -eq 'everything') | ForEach-Object { $_ })
+            Send-Json $ctx ([pscustomobject]@{ ok = $true; events = $le.Count; message = "检测完成, $($le.Count) 个新事件" })
+        }
+        catch {
+            Send-Json $ctx ([pscustomobject]@{ ok = $false; error = $_.Exception.Message })
+        }
+        return
+    }
+
+    if ($path -eq '/api/logs/toggle' -and $method -eq 'POST') {
+        $cfg2 = Get-Config $script:CfgPath
+        $cfg2.logEnabled = if ($cfg2.logEnabled -eq $false) { $true } else { $false }
+        Save-ConfigFile $cfg2 $script:CfgPath
+        if ($cfg2.logEnabled) { Start-LogMonitor } else { Stop-LogMonitor }
+        Send-Json $ctx ([pscustomobject]@{ ok = $true; enabled = $cfg2.logEnabled; message = if ($cfg2.logEnabled) { '活动日志已启用' } else { '活动日志已停用' } })
+        return
+    }
+
     if ($path -eq '/api/scan' -and $method -eq 'POST') {
         try {
             if ($script:IndexMode -eq 'everything') { $r = Invoke-ESFullScan $cfg $extMap }
-            else { $r = Invoke-FullScan $cfg $extMap }
+            else {
+                $r = Invoke-FullScan $cfg $extMap
+                if ($cfg.logEnabled -ne $false) {
+                    try {
+                        $le = @(Sync-MediaLogs $cfg $extMap $false | ForEach-Object { $_ })
+                        if ($le.Count -gt 0) { $r.Message = $r.Message + " (日志: $($le.Count) 个新事件)" }
+                    }
+                    catch {}
+                }
+            }
             Send-Json $ctx ([pscustomobject]@{
                 ok = $true
                 count = $r.Count
@@ -638,6 +773,8 @@ function Handle-Request($ctx) {
 
     if ($path -eq '/api/quit' -and $method -eq 'POST') {
         $script:StopRequested = $true
+        Stop-LogMonitor
+        Stop-Poller
         Send-Json $ctx ([pscustomobject]@{ ok = $true; message = "服务器正在退出" })
         if ($script:IndexMode -eq 'everything' -and $script:EsStartedByUs -and $cfg.stopEverythingOnExit) {
             try { [MFEs]::Exit() } catch {}
@@ -697,6 +834,14 @@ if (-not $NoBrowser) {
 $autoRefresh = $true
 if ($null -ne $cfg.autoRefresh) { $autoRefresh = $cfg.autoRefresh }
 if ($autoRefresh) { Start-Poller }
+
+if ($script:IndexMode -eq 'everything') {
+    try {
+        $extMapI = Build-ExtMap $cfg
+        [void](Sync-MediaLogs $cfg $extMapI $true)
+    } catch {}
+}
+Start-LogMonitor
 
 Ensure-Shortcut
 

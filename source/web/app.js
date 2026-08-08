@@ -11,6 +11,13 @@ const els = {
   monitorToggle: $('monitorToggle'),
   pathList: $('pathList'),
   privacyNote: $('privacyNote'),
+  logList: $('logList'),
+  logHint: $('logHint'),
+  logDate: $('logDate'),
+  logPrevBtn: $('logPrevBtn'),
+  logNextBtn: $('logNextBtn'),
+  logRunBtn: $('logRunBtn'),
+  logToggle: $('logToggle'),
   kwInput: $('kwInput'),
   typeSelect: $('typeSelect'),
   sinceSelect: $('sinceSelect'),
@@ -51,6 +58,78 @@ els.themeBtn.addEventListener('click', () => {
 let toastTimer = null;
 let currentGroups = [];
 let currentCatCounts = {};
+let logDateStr = todayStr();
+function todayStr() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function shiftLogDate(delta) {
+  const d = new Date(logDateStr + 'T12:00:00');
+  d.setDate(d.getDate() + delta);
+  logDateStr = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  fetchLogs();
+}
+function renderLogDateLabel() {
+  els.logDate.textContent = (logDateStr === todayStr()) ? '今天' : logDateStr;
+  els.logDate.title = '回到今天';
+}
+const logTypeLabel = { added: '新增', moved: '移动', gone: '消失' };
+function logDetailText(l) {
+  if (l.type === 'moved') return `旧: ${l.old} → 新: ${l.new}`;
+  if (l.type === 'added') return l.new || '';
+  return '未找到，可能已移入回收站或未监控目录';
+}
+function renderLogs(r) {
+  renderLogDateLabel();
+  if (r && r.enabled != null) els.logToggle.checked = !!r.enabled;
+  const hintParts = [];
+  if (r && r.lastCheck) hintParts.push('上次检查 ' + r.lastCheck);
+  hintParts.push('新增' + (r && r.enabled === false ? '已停用' : '每 30 秒'));
+  els.logHint.textContent = hintParts.join(' · ') + ' · 检测新增/移动/消失的媒体文件';
+  els.logList.innerHTML = '';
+  const logs = (r && r.logs) || [];
+  if (!logs.length) {
+    const li = document.createElement('li');
+    li.className = 'log-empty';
+    li.textContent = logDateStr === todayStr() ? '暂无事件' : '该日期暂无日志';
+    els.logList.appendChild(li);
+    return;
+  }
+  logs.forEach((l) => {
+    const li = document.createElement('li');
+    li.className = 'log-item';
+    const time = document.createElement('span');
+    time.className = 'log-time';
+    time.textContent = (l.t || '').slice(11, 19);
+    const badge = document.createElement('span');
+    badge.className = 'log-badge log-badge-' + (l.type === 'added' ? 'added' : (l.type === 'moved' ? 'moved' : 'gone'));
+    badge.textContent = logTypeLabel[l.type] || l.type;
+    const body = document.createElement('div');
+    body.className = 'log-body';
+    const name = document.createElement('div');
+    name.className = 'log-name';
+    name.textContent = l.name;
+    const det = document.createElement('div');
+    det.className = 'log-detail';
+    det.textContent = logDetailText(l);
+    det.title = logDetailText(l) + '（点击展开/收起）';
+    det.addEventListener('click', (e) => e.currentTarget.classList.toggle('expanded'));
+    body.appendChild(name);
+    body.appendChild(det);
+    li.appendChild(time);
+    li.appendChild(badge);
+    li.appendChild(body);
+    els.logList.appendChild(li);
+  });
+}
+async function fetchLogs() {
+  try {
+    const r = await api('/api/logs?date=' + encodeURIComponent(logDateStr));
+    renderLogs(r);
+  } catch (e) {
+    els.logHint.textContent = '日志加载失败';
+  }
+}
 let currentIndexMode = 'ps';
 function toast(msg, isErr = false) {
   els.toast.textContent = msg;
@@ -533,3 +612,30 @@ els.quitBtn.addEventListener('click', async () => {
 
 fetchStatus();
 setInterval(() => fetchStatus(true), 5000);
+fetchLogs();
+setInterval(() => { if (logDateStr === todayStr()) fetchLogs(); }, 5000);
+els.logPrevBtn.addEventListener('click', () => shiftLogDate(-1));
+els.logNextBtn.addEventListener('click', () => shiftLogDate(1));
+els.logDate.addEventListener('click', () => { logDateStr = todayStr(); fetchLogs(); });
+els.logRunBtn.addEventListener('click', async () => {
+  els.logRunBtn.disabled = true;
+  try {
+    const r = await api('/api/logs/run', {});
+    toast(r.message || '检测完成');
+    fetchLogs();
+  } catch (e) {
+    toast('检测失败', true);
+  } finally {
+    els.logRunBtn.disabled = false;
+  }
+});
+els.logToggle.addEventListener('change', async () => {
+  try {
+    const r = await api('/api/logs/toggle', {});
+    toast(r.message || (r.enabled ? '活动日志已启用' : '活动日志已停用'));
+    fetchLogs();
+  } catch (e) {
+    els.logToggle.checked = !els.logToggle.checked;
+    toast('操作失败', true);
+  }
+});

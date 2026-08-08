@@ -10,6 +10,9 @@ function Get-Config {
     if (Test-Path -LiteralPath $ConfigPath) {
         $c = Get-Content -LiteralPath $ConfigPath -Raw -Encoding UTF8 | ConvertFrom-Json
         if ($null -eq $c.ignoredPrivacyDirs) { $c | Add-Member -NotePropertyName ignoredPrivacyDirs -NotePropertyValue @() -Force }
+        if ($null -eq $c.logEnabled) { $c | Add-Member -NotePropertyName logEnabled -NotePropertyValue $true -Force }
+        if ($null -eq $c.logIntervalSeconds) { $c | Add-Member -NotePropertyName logIntervalSeconds -NotePropertyValue 30 -Force }
+        if ($null -eq $c.logKeepDays) { $c | Add-Member -NotePropertyName logKeepDays -NotePropertyValue 30 -Force }
         return $c
     }
     $u = $env:USERPROFILE
@@ -35,6 +38,9 @@ function Get-Config {
         autostartEverythingOnBoot = $true
         stopEverythingOnExit = $false
         ignoredPrivacyDirs = @()
+        logEnabled = $true
+        logIntervalSeconds = 30
+        logKeepDays = 30
         indexFile = (Join-Path (Get-ScriptDir) 'MediaFinder.index.json')
     }
     $defaults | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $ConfigPath -Encoding UTF8
@@ -64,7 +70,7 @@ function Load-Index($path) {
         $j = Get-Content -LiteralPath $path -Raw -Encoding UTF8 -ErrorAction SilentlyContinue | ConvertFrom-Json -ErrorAction SilentlyContinue
         if ($j) { foreach ($x in $j) { $list.Add($x) | Out-Null } }
     }
-    return ,$list
+    return $list
 }
 
 function Save-Index($path, $list) {
@@ -128,7 +134,7 @@ function Resolve-WatchConfig($cfg) {
         $jyDraft = Join-Path $env:LOCALAPPDATA 'JianyingPro\User Data\Projects\com.lveditor.draft'
         if (Test-Path -LiteralPath $jyDraft) { Add-Entry $jyDraft @() @() }
     }
-    return ,$entries
+    return $entries
 }
 
 function Find-PrivacyDirs($cfg) {
@@ -148,7 +154,7 @@ function Find-PrivacyDirs($cfg) {
         if ($current -contains $rp) { continue }
         $res.Add([pscustomobject]@{ kind = $c.Kind; path = $rp; hint = $c.Hint; excludes = @(Get-PrivacyExcludes $c.Kind) }) | Out-Null
     }
-    return ,@($res)
+    return @($res)
 }
 
 function Get-PrivacyExcludes($kind) {
@@ -171,6 +177,163 @@ function Get-PrivacyExcludes($kind) {
             )
         }
         default { return @() }
+    }
+}
+
+# ---------- 活动日志 ----------
+
+function Get-LogDir($cfg) {
+    $d = Join-Path (Get-ScriptDir) 'logs'
+    try { if (-not (Test-Path -LiteralPath $d)) { New-Item -ItemType Directory -Path $d -Force | Out-Null } } catch {}
+    return $d
+}
+
+function Get-LogSnapshotPath($cfg) { Join-Path (Get-LogDir $cfg) 'snapshot.json' }
+
+function Get-MediaSnapshot($cfg, $extMap, $useEverything) {
+    $list = New-Object System.Collections.ArrayList
+    if ($useEverything) {
+        $entries = Resolve-WatchConfig $cfg
+        foreach ($r in @(Search-Everything $cfg $extMap $entries $null $null $null 50000)) {
+            if (-not $r -or -not $r.FullPath) { continue }
+            [void]$list.Add([pscustomobject]@{
+                Name = $r.Name
+                FullPath = $r.FullPath
+                Size = if ($null -ne $r.Size) { [int64]$r.Size } else { 0 }
+                LastWriteTime = if ($null -ne $r.LastWriteTime) { $r.LastWriteTime } else { [DateTime]::MinValue }
+            })
+        }
+    }
+    else {
+        foreach ($x in @(Load-Index (Get-IndexFile $cfg))) {
+            if (-not $x -or -not $x.FullPath) { continue }
+            [void]$list.Add([pscustomobject]@{
+                Name = $x.Name
+                FullPath = $x.FullPath
+                Size = if ($null -ne $x.Size) { [int64]$x.Size } else { 0 }
+                LastWriteTime = if ($null -ne $x.LastWriteTime) { [DateTime]$x.LastWriteTime } else { [DateTime]::MinValue }
+            })
+        }
+    }
+    return @($list)
+}
+
+function Compare-MediaSnapshots($prev, $curr) {
+    $events = New-Object System.Collections.ArrayList
+    $pMap = @{}
+    $cMap = @{}
+    $cByName = @{}
+    foreach ($p in @($prev)) {
+        if ($p.FullPath) { $pMap[$p.FullPath.ToLowerInvariant()] = $p }
+    }
+    foreach ($c in @($curr)) {
+        if (-not $c.FullPath) { continue }
+        $cMap[$c.FullPath.ToLowerInvariant()] = $c
+        $n = $c.Name.ToLowerInvariant()
+        if (-not $cByName.ContainsKey($n)) { $cByName[$n] = New-Object System.Collections.ArrayList }
+        [void]$cByName[$n].Add($c)
+    }
+    $added = @()
+    foreach ($c in @($curr)) {
+        if ($c.FullPath -and -not $pMap.ContainsKey($c.FullPath.ToLowerInvariant())) { $added += $c }
+    }
+    $gone = @()
+    foreach ($p in @($prev)) {
+        if ($p.FullPath -and -not $cMap.ContainsKey($p.FullPath.ToLowerInvariant())) { $gone += $p }
+    }
+    $usedAdd = @{}
+    $movedOld = @{}
+    foreach ($g in $gone) {
+        $n = $g.Name.ToLowerInvariant()
+        if (-not $cByName.ContainsKey($n)) { continue }
+        $best = $null
+        foreach ($cand in $cByName[$n]) {
+            $k = $cand.FullPath.ToLowerInvariant()
+            if ($usedAdd.ContainsKey($k)) { continue }
+            $sameSize = ($null -ne $g.Size -and $null -ne $cand.Size -and $g.Size -eq $cand.Size -and $g.Size -gt 0)
+            $sameTime = ($null -ne $g.LastWriteTime -and $null -ne $cand.LastWriteTime -and $g.LastWriteTime -gt [DateTime]::MinValue -and $cand.LastWriteTime -gt [DateTime]::MinValue -and [Math]::Abs(($g.LastWriteTime - $cand.LastWriteTime).TotalSeconds) -le 2)
+            if ($sameSize) { $best = $cand; break }
+            if ($sameTime) { $best = $cand; break }
+            if (-not $best) { $best = $cand }
+        }
+        if ($best) {
+            $usedAdd[$best.FullPath.ToLowerInvariant()] = $true
+            $movedOld[$g.FullPath.ToLowerInvariant()] = $true
+            [void]$events.Add([pscustomobject]@{ Type = 'moved'; Name = $g.Name; Old = $g.FullPath; New = $best.FullPath })
+        }
+    }
+    foreach ($a in $added) {
+        if (-not $usedAdd.ContainsKey($a.FullPath.ToLowerInvariant())) {
+            [void]$events.Add([pscustomobject]@{ Type = 'added'; Name = $a.Name; Old = $null; New = $a.FullPath })
+        }
+    }
+    foreach ($g in $gone) {
+        if (-not $movedOld.ContainsKey($g.FullPath.ToLowerInvariant())) {
+            [void]$events.Add([pscustomobject]@{ Type = 'gone'; Name = $g.Name; Old = $g.FullPath; New = $null })
+        }
+    }
+    return @($events)
+}
+
+function Write-MediaLog($cfg, $event) {
+    if (-not $event) { return }
+    $d = Get-LogDir $cfg
+    $time = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
+    $line = [pscustomobject]@{ t = $time; type = [string]$event.Type; name = [string]$event.Name; old = [string]$event.Old; new = [string]$event.New } | ConvertTo-Json -Compress
+    try {
+        Add-Content -LiteralPath (Join-Path $d ((Get-Date).ToString('yyyy-MM-dd') + '.log')) -Value $line -Encoding UTF8
+    }
+    catch {}
+}
+
+function Sync-MediaLogs($cfg, $extMap, $useEverything) {
+    $snapPath = Get-LogSnapshotPath $cfg
+    $prev = @()
+    if (Test-Path -LiteralPath $snapPath) {
+        try { $prev = @(Get-Content -LiteralPath $snapPath -Raw -Encoding UTF8 | ConvertFrom-Json | ForEach-Object { $_ }) } catch { $prev = @() }
+    }
+    $curr = @(Get-MediaSnapshot $cfg $extMap $useEverything)
+    try {
+        $tmp = "$snapPath.tmp"
+        @($curr) | ConvertTo-Json -Depth 3 | Set-Content -LiteralPath $tmp -Encoding UTF8
+        Move-Item -LiteralPath $tmp -Destination $snapPath -Force
+    }
+    catch {}
+    if (@($prev).Count -eq 0) { return @() }
+    $events = @(Compare-MediaSnapshots $prev $curr)
+    foreach ($e in $events) { Write-MediaLog $cfg $e }
+    return $events
+}
+
+function Read-LogFile($cfg, $dateStr, $maxLines) {
+    if (-not $dateStr) { $dateStr = (Get-Date).ToString('yyyy-MM-dd') }
+    if ($dateStr -notmatch '^\d{4}-\d{2}-\d{2}$') { return @() }
+    $f = Join-Path (Get-LogDir $cfg) "$dateStr.log"
+    $out = New-Object System.Collections.ArrayList
+    if (Test-Path -LiteralPath $f) {
+        foreach ($line in @(Get-Content -LiteralPath $f -Tail ([Math]::Max(1, $maxLines)) -Encoding UTF8)) {
+            try {
+                $j = $line | ConvertFrom-Json -ErrorAction SilentlyContinue
+                if ($j) { [void]$out.Add($j) }
+            }
+            catch {}
+        }
+    }
+    return @($out)
+}
+
+function Get-LogDates($cfg) {
+    $d = Get-LogDir $cfg
+    return @(Get-ChildItem -LiteralPath $d -Filter '*.log' -File -ErrorAction SilentlyContinue | ForEach-Object { $_.BaseName } | Sort-Object -Descending)
+}
+
+function Clean-LogFiles($cfg) {
+    $keep = 30
+    if ($null -ne $cfg.logKeepDays) { $keep = [int]$cfg.logKeepDays }
+    if ($keep -lt 1) { $keep = 1 }
+    $cut = (Get-Date).AddDays(-$keep)
+    foreach ($f in @(Get-ChildItem -LiteralPath (Get-LogDir $cfg) -Filter '*.log' -File -ErrorAction SilentlyContinue)) {
+        if ($f.LastWriteTime -lt $cut) { try { Remove-Item -LiteralPath $f.FullName -Force -ErrorAction SilentlyContinue } catch {} }
     }
 }
 
@@ -252,7 +415,7 @@ function Invoke-FullScan($cfg, $extMap) {
     Save-Index (Get-IndexFile $cfg) $list
     $msg = "完成: 共 $($list.Count) 个媒体文件, 用时 $([math]::Round($secs,1)) 秒"
     Write-Host $msg
-    return ,[pscustomobject]@{
+    return [pscustomobject]@{
         Count = $list.Count
         Seconds = [math]::Round($secs, 1)
         Message = $msg
@@ -342,7 +505,7 @@ function Invoke-Search($list, $keyword, $type, $since, $from, $to) {
         ($null -eq $from -or $_.LastWriteTime -ge $from) -and
         ($null -eq $to -or $_.LastWriteTime -le $to)
     })
-    return ,@($res | Sort-Object LastWriteTime -Descending)
+    return @($res | Sort-Object LastWriteTime -Descending)
 }
 
 # ============ Everything 实时索引提供者 ============
@@ -619,7 +782,7 @@ function Invoke-ESFullScan {
     $secs = ((Get-Date) - $start).TotalSeconds
     $msg = "完成: 共 $($arr.Count) 个媒体文件, 用时 $([math]::Round($secs,2)) 秒 (Everything 实时索引)"
     Write-Host $msg
-    return ,[pscustomobject]@{
+    return [pscustomobject]@{
         Count = $arr.Count
         Seconds = [math]::Round($secs, 2)
         Message = $msg
