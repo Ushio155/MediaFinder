@@ -91,6 +91,8 @@ function locateInResults(path) {
   const target = document.querySelector(`.result-item .thumb[data-path="${encodeURIComponent(path)}"]`);
   if (target) {
     const row = target.closest('.result-item');
+    const group = row.closest('.group');
+    if (group && group.classList.contains('collapsed')) group.classList.remove('collapsed');
     row.scrollIntoView({ behavior: 'smooth', block: 'center' });
     row.classList.remove('flash-locate');
     void row.offsetWidth;
