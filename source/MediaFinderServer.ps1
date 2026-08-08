@@ -632,29 +632,14 @@ function Handle-Request($ctx) {
         return
     }
 
-    if ($path -eq '/api/logs/run' -and $method -eq 'POST') {
-        try {
-            $le = @(Sync-MediaLogs $cfg $extMap ($script:IndexMode -eq 'everything') | ForEach-Object { $_ })
-            Send-Json $ctx ([pscustomobject]@{ ok = $true; events = $le.Count; message = "检测完成, $($le.Count) 个新事件" })
-        }
-        catch {
-            Send-Json $ctx ([pscustomobject]@{ ok = $false; error = $_.Exception.Message })
-        }
-        return
-    }
-
-    if ($path -eq '/api/logs/toggle' -and $method -eq 'POST') {
-        $cfg2 = Get-Config $script:CfgPath
-        $cfg2.logEnabled = if ($cfg2.logEnabled -eq $false) { $true } else { $false }
-        Save-ConfigFile $cfg2 $script:CfgPath
-        if ($cfg2.logEnabled) { Start-LogMonitor } else { Stop-LogMonitor }
-        Send-Json $ctx ([pscustomobject]@{ ok = $true; enabled = $cfg2.logEnabled; message = if ($cfg2.logEnabled) { '活动日志已启用' } else { '活动日志已停用' } })
-        return
-    }
-
     if ($path -eq '/api/scan' -and $method -eq 'POST') {
         try {
-            if ($script:IndexMode -eq 'everything') { $r = Invoke-ESFullScan $cfg $extMap }
+            if ($script:IndexMode -eq 'everything') {
+                $r = Invoke-ESFullScan $cfg $extMap
+                if ($cfg.logEnabled -ne $false) {
+                    try { [void](Sync-MediaLogs $cfg $extMap $true) } catch {}
+                }
+            }
             else {
                 $r = Invoke-FullScan $cfg $extMap
                 if ($cfg.logEnabled -ne $false) {

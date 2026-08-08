@@ -16,10 +16,7 @@ const els = {
   logDate: $('logDate'),
   logPrevBtn: $('logPrevBtn'),
   logNextBtn: $('logNextBtn'),
-  logRunBtn: $('logRunBtn'),
-  logToggle: $('logToggle'),
-  pathsToggle: $('pathsToggle'),
-  pathsCard: $('pathsCard'),
+  logFilter: $('logFilter'),
   kwInput: $('kwInput'),
   typeSelect: $('typeSelect'),
   sinceSelect: $('sinceSelect'),
@@ -61,6 +58,8 @@ let toastTimer = null;
 let currentGroups = [];
 let currentCatCounts = {};
 let pendingLocatePath = null;
+let logFilterVal = '';
+let lastLogs = null;
 let logDateStr = todayStr();
 function todayStr() {
   const d = new Date();
@@ -106,17 +105,17 @@ function locateInResults(path) {
 }
 function renderLogs(r) {
   renderLogDateLabel();
-  if (r && r.enabled != null) els.logToggle.checked = !!r.enabled;
   const hintParts = [];
   if (r && r.lastCheck) hintParts.push('上次检查 ' + r.lastCheck);
-  hintParts.push('新增' + (r && r.enabled === false ? '已停用' : '每 30 秒'));
+  hintParts.push('实时更新');
   els.logHint.textContent = hintParts.join(' · ') + ' · 检测新增/移动/消失的媒体文件';
   els.logList.innerHTML = '';
-  const logs = (r && r.logs) || [];
+  const allLogs = (r && r.logs) || [];
+  const logs = logFilterVal ? allLogs.filter((l) => l.type === logFilterVal) : allLogs;
   if (!logs.length) {
     const li = document.createElement('li');
     li.className = 'log-empty';
-    li.textContent = logDateStr === todayStr() ? '暂无事件' : '该日期暂无日志';
+    li.textContent = allLogs.length ? '该类型暂无事件' : (logDateStr === todayStr() ? '暂无事件' : '该日期暂无日志');
     els.logList.appendChild(li);
     return;
   }
@@ -163,6 +162,7 @@ function renderLogs(r) {
 async function fetchLogs() {
   try {
     const r = await api('/api/logs?date=' + encodeURIComponent(logDateStr));
+    lastLogs = r;
     renderLogs(r);
   } catch (e) {
     els.logHint.textContent = '日志加载失败';
@@ -661,35 +661,16 @@ setInterval(() => { if (logDateStr === todayStr()) fetchLogs(); }, 5000);
 els.logPrevBtn.addEventListener('click', () => shiftLogDate(-1));
 els.logNextBtn.addEventListener('click', () => shiftLogDate(1));
 els.logDate.addEventListener('click', () => { logDateStr = todayStr(); fetchLogs(); });
-els.logRunBtn.addEventListener('click', async () => {
-  els.logRunBtn.disabled = true;
-  try {
-    const r = await api('/api/logs/run', {});
-    toast(r.message || '检测完成');
-    fetchLogs();
-  } catch (e) {
-    toast('检测失败', true);
-  } finally {
-    els.logRunBtn.disabled = false;
-  }
+els.logFilter.addEventListener('change', () => {
+  logFilterVal = els.logFilter.value;
+  if (lastLogs) renderLogs(lastLogs);
 });
-els.logToggle.addEventListener('change', async () => {
-  try {
-    const r = await api('/api/logs/toggle', {});
-    toast(r.message || (r.enabled ? '活动日志已启用' : '活动日志已停用'));
-    fetchLogs();
-  } catch (e) {
-    els.logToggle.checked = !els.logToggle.checked;
-    toast('操作失败', true);
-  }
+document.querySelectorAll('.card.foldable').forEach((card) => {
+  const t = card.querySelector('.fold-toggle');
+  if (!t) return;
+  t.addEventListener('click', () => {
+    const folded = card.classList.toggle('folded');
+    try { localStorage.setItem('mf-fold-' + card.id, folded ? '1' : '0'); } catch (e) {}
+  });
+  if (localStorage.getItem('mf-fold-' + card.id) === '1') card.classList.add('folded');
 });
-els.pathsToggle.addEventListener('click', () => {
-  els.pathsCard.classList.toggle('folded');
-  const folded = els.pathsCard.classList.contains('folded');
-  els.pathsToggle.textContent = folded ? '▸' : '▾';
-  try { localStorage.setItem('mf-paths-folded', folded ? '1' : '0'); } catch (e) {}
-});
-if (localStorage.getItem('mf-paths-folded') === '1') {
-  els.pathsCard.classList.add('folded');
-  els.pathsToggle.textContent = '▸';
-}
