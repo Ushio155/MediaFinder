@@ -102,6 +102,7 @@ function locateInResults(path) {
   if (!name) return;
   pendingLocatePath = path;
   els.kwInput.value = name;
+  updateKwClear();
   doSearch();
 }
 function renderLogs(r) {
