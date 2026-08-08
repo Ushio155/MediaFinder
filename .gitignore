@@ -17,3 +17,6 @@ MediaFinder.exe
 Thumbs.db
 Desktop.ini
 .DS_Store
+
+# 测试残留
+source/logs/
