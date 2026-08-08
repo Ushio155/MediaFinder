@@ -65,19 +65,22 @@
           <div class="card-head">
             <span class="fold-toggle" title="折叠/展开">▾</span>
             <span>📜 活动日志</span>
-            <select id="logFilter" class="log-filter" title="按类型筛选">
-              <option value="">全部</option>
-              <option value="added">新增</option>
-              <option value="moved">移动</option>
-              <option value="gone">消失</option>
-            </select>
+            <button id="logManageBtn" class="btn btn-sm btn-primary">⚙ 日志管理</button>
           </div>
           <div class="card-collapsible">
-            <span class="log-tools">
-              <button id="logPrevBtn" class="icon-btn-sm" title="前一天">◀</button>
-              <span id="logDate" class="log-date" title="点击回到今天">今天</span>
-              <button id="logNextBtn" class="icon-btn-sm" title="后一天">▶</button>
-            </span>
+            <div class="log-tools">
+              <span class="log-date-group">
+                <button id="logPrevBtn" class="icon-btn-sm" title="前一天">◀</button>
+                <span id="logDate" class="log-date" title="点击回到今天">今天</span>
+                <button id="logNextBtn" class="icon-btn-sm" title="后一天">▶</button>
+              </span>
+              <select id="logFilter" class="log-filter" title="按类型筛选">
+                <option value="">全部</option>
+                <option value="added">新增</option>
+                <option value="moved">移动</option>
+                <option value="gone">消失</option>
+              </select>
+            </div>
             <ul class="log-list" id="logList"></ul>
             <p class="hint" id="logHint">检测新增、移动与消失的媒体文件（可能移入回收站或未监控目录）</p>
           </div>
@@ -161,6 +164,22 @@
             <button class="btn btn-sm btn-primary" id="browseAdd" disabled>＋ 添加此目录</button>
           </div>
           <div class="browse-list" id="browseList"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-mask" id="logModal" style="display:none">
+    <div class="modal">
+      <div class="modal-head">
+        <h3>📜 日志管理</h3>
+        <button class="btn btn-ghost btn-icon" id="logModalClose" title="关闭">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="log-manage-hint">日志按日期保存在 <code>%LOCALAPPDATA%\MediaFinder\logs</code>，可导出或删除以释放空间</p>
+        <div class="log-manage-list" id="logManageList"></div>
+        <div class="log-manage-actions">
+          <button id="logDelAllBtn" class="btn btn-sm btn-danger">🗑 删除全部日志</button>
         </div>
       </div>
     </div>

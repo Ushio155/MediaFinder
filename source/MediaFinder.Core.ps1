@@ -352,6 +352,35 @@ function Clean-LogFiles($cfg) {
     }
 }
 
+function Get-LogFileInfo($cfg) {
+    $d = Get-LogDir $cfg
+    return @(Get-ChildItem -LiteralPath $d -Filter '*.log' -File -ErrorAction SilentlyContinue | Where-Object { $_.BaseName -match '^\d{4}-\d{2}-\d{2}$' } | ForEach-Object {
+        $events = 0
+        try { $events = @(Get-Content -LiteralPath $_.FullName -Tail 9999 -Encoding UTF8).Count } catch {}
+        [pscustomobject]@{ date = $_.BaseName; size = $_.Length; events = $events }
+    } | Sort-Object { $_.date } -Descending)
+}
+
+function Remove-LogFile($cfg, $dateStr) {
+    if ($dateStr -notmatch '^\d{4}-\d{2}-\d{2}$') { return $false }
+    $f = Join-Path (Get-LogDir $cfg) "$dateStr.log"
+    if (Test-Path -LiteralPath $f) {
+        try { Remove-Item -LiteralPath $f -Force -ErrorAction Stop; return $true } catch { return $false }
+    }
+    return $false
+}
+
+function Remove-AllLogs($cfg) {
+    $d = Get-LogDir $cfg
+    $cnt = 0
+    foreach ($f in @(Get-ChildItem -LiteralPath $d -Filter '*.log' -File -ErrorAction SilentlyContinue)) {
+        if ($f.BaseName -match '^\d{4}-\d{2}-\d{2}$') {
+            try { Remove-Item -LiteralPath $f.FullName -Force -ErrorAction SilentlyContinue; $cnt++ } catch {}
+        }
+    }
+    return $cnt
+}
+
 function Get-EntryForPath($entries, $fullPath) {
     if (-not $entries) { return $null }
     $p = $fullPath.ToLower()

@@ -41,6 +41,11 @@ const els = {
   browseUp: $('browseUp'),
   browseAdd: $('browseAdd'),
   browseList: $('browseList'),
+  logManageBtn: $('logManageBtn'),
+  logModal: $('logModal'),
+  logModalClose: $('logModalClose'),
+  logManageList: $('logManageList'),
+  logDelAllBtn: $('logDelAllBtn'),
   toast: $('toast'),
 };
 
@@ -587,6 +592,74 @@ async function ignorePrivacy(path) {
     toast('操作失败', true);
   }
 }
+
+function openLogManage() {
+  els.logModal.style.display = 'flex';
+  renderLogManage();
+}
+function closeLogManage() { els.logModal.style.display = 'none'; }
+async function renderLogManage() {
+  els.logManageList.innerHTML = '<div class="browse-hint">加载中…</div>';
+  try {
+    const r = await api('/api/logs/dates');
+    const dates = r.dates || [];
+    els.logManageList.innerHTML = '';
+    if (!dates.length) {
+      els.logManageList.innerHTML = '<div class="browse-hint">暂无历史日志</div>';
+      return;
+    }
+    dates.forEach((d) => {
+      const item = document.createElement('div');
+      item.className = 'log-manage-item';
+      item.innerHTML = `<span class="lm-date">${escapeHtml(d.date)}</span><span class="lm-info">${d.events} 条事件 · ${fmtSize(d.size)}</span>`;
+      const actions = document.createElement('div');
+      actions.className = 'lm-actions';
+      const expBtn = document.createElement('button');
+      expBtn.className = 'btn btn-sm';
+      expBtn.textContent = '导出';
+      expBtn.addEventListener('click', () => { window.location = '/api/logs/export?date=' + encodeURIComponent(d.date); });
+      const delBtn = document.createElement('button');
+      delBtn.className = 'btn btn-sm btn-danger';
+      delBtn.textContent = '删除';
+      delBtn.addEventListener('click', () => {
+        if (!confirm('确定删除 ' + d.date + ' 的日志吗？\n此操作不可撤销。')) return;
+        deleteLogDate(d.date);
+      });
+      actions.appendChild(expBtn);
+      actions.appendChild(delBtn);
+      item.appendChild(actions);
+      els.logManageList.appendChild(item);
+    });
+  } catch (e) {
+    els.logManageList.innerHTML = '<div class="browse-hint">加载失败</div>';
+  }
+}
+async function deleteLogDate(date) {
+  try {
+    const r = await api('/api/logs/delete', { date });
+    if (r.ok) {
+      toast('已删除 ' + date + ' 日志');
+      renderLogManage();
+      if (logDateStr === date) { logDateStr = todayStr(); fetchLogs(); }
+    } else {
+      toast('删除失败', true);
+    }
+  } catch (e) {
+    toast('删除失败', true);
+  }
+}
+async function deleteAllLogs() {
+  if (!confirm('确定删除全部历史日志吗？\n此操作不可撤销。')) return;
+  try {
+    const r = await api('/api/logs/delete-all', {});
+    toast('已删除 ' + (r.deleted || 0) + ' 个日志文件');
+    renderLogManage();
+    logDateStr = todayStr();
+    fetchLogs();
+  } catch (e) {
+    toast('删除失败', true);
+  }
+}
 function renderPrivacyDirs(dirs) {
   const box = els.privacyNote;
   box.innerHTML = '';
@@ -629,6 +702,10 @@ els.suggestBtn.addEventListener('click', doSuggest);
 els.suggestKw.addEventListener('keydown', (e) => { if (e.key === 'Enter') doSuggest(); });
 els.browseUp.addEventListener('click', () => { if (browseParent !== null) loadBrowse(browseParent); });
 els.browseAdd.addEventListener('click', () => { if (browseCurrent) addPath(browseCurrent); });
+els.logManageBtn.addEventListener('click', openLogManage);
+els.logModalClose.addEventListener('click', closeLogManage);
+els.logModal.addEventListener('click', (e) => { if (e.target === els.logModal) closeLogManage(); });
+els.logDelAllBtn.addEventListener('click', deleteAllLogs);
 
 let kwTimer = null;
 function updateKwClear() { els.kwClear.hidden = !els.kwInput.value; }

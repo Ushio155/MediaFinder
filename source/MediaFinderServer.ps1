@@ -59,7 +59,7 @@ function Send-Json($ctx, $obj) {
     $ctx.Response.Close()
 }
 
-function Send-File($ctx, $path, $mime) {
+function Send-File($ctx, $path, $mime, $filename) {
     if (-not (Test-Path -LiteralPath $path)) {
         $ctx.Response.StatusCode = 404
         $ctx.Response.Close()
@@ -67,6 +67,9 @@ function Send-File($ctx, $path, $mime) {
     }
     $bytes = [System.IO.File]::ReadAllBytes($path)
     $ctx.Response.ContentType = $mime
+    if ($filename) {
+        $ctx.Response.AddHeader('Content-Disposition', "attachment; filename=`"$filename`"")
+    }
     $ctx.Response.ContentLength64 = $bytes.Length
     $ctx.Response.OutputStream.Write($bytes, 0, $bytes.Length)
     $ctx.Response.Close()
@@ -628,7 +631,37 @@ function Handle-Request($ctx) {
     }
 
     if ($path -eq '/api/logs/dates' -and $method -eq 'GET') {
-        Send-Json $ctx ([pscustomobject]@{ ok = $true; dates = @(Get-LogDates $cfg | ForEach-Object { $_ }) })
+        Send-Json $ctx ([pscustomobject]@{ ok = $true; dates = @(Get-LogFileInfo $cfg | ForEach-Object { $_ }) })
+        return
+    }
+
+    if ($path -eq '/api/logs/export' -and $method -eq 'GET') {
+        $date = $null
+        $q = $url.Query
+        if ($q) {
+            foreach ($part in ($q.TrimStart('?') -split '&')) {
+                $kv = $part -split '=', 2
+                if ($kv.Count -eq 2 -and $kv[0] -eq 'date') { $date = [System.Uri]::UnescapeDataString($kv[1]) }
+            }
+        }
+        if (-not $date -or $date -notmatch '^\d{4}-\d{2}-\d{2}$') { Send-Empty $ctx 400; return }
+        $f = Join-Path (Get-LogDir $cfg) "$date.log"
+        if (-not (Test-Path -LiteralPath $f)) { Send-Empty $ctx 404; return }
+        Send-File $ctx $f 'text/plain; charset=utf-8' "$date.log"
+        return
+    }
+
+    if ($path -eq '/api/logs/delete' -and $method -eq 'POST') {
+        $body = Read-Body $ctx
+        $date = if ($body) { [string]$body.date } else { '' }
+        $ok = Remove-LogFile $cfg $date
+        Send-Json $ctx ([pscustomobject]@{ ok = $ok; date = $date })
+        return
+    }
+
+    if ($path -eq '/api/logs/delete-all' -and $method -eq 'POST') {
+        $cnt = Remove-AllLogs $cfg
+        Send-Json $ctx ([pscustomobject]@{ ok = $true; deleted = $cnt })
         return
     }
 
