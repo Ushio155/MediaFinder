@@ -47,16 +47,16 @@
         <section class="card foldable" id="monitorCard">
           <div class="card-head">
             <span class="fold-toggle" title="折叠/展开">▾</span>
-            <span id="monitorCardTitle">🔄 自动刷新</span>
-          </div>
-          <div class="toggle-row">
-            <span id="monitorText">自动刷新已关闭</span>
-            <label class="switch">
-              <input type="checkbox" id="monitorToggle">
-              <span class="slider"></span>
-            </label>
+            <span id="monitorCardTitle">⚡ 实时索引</span>
           </div>
           <div class="card-collapsible">
+            <div class="toggle-row">
+              <span id="monitorText">自动刷新已关闭</span>
+              <label class="switch">
+                <input type="checkbox" id="monitorToggle">
+                <span class="slider"></span>
+              </label>
+            </div>
             <p class="hint" id="monitorHint">开启后每几秒自动检查监控目录中的新文件并收录（低功耗）</p>
           </div>
         </section>
@@ -64,7 +64,7 @@
         <section class="card foldable" id="logCard">
           <div class="card-head">
             <span class="fold-toggle" title="折叠/展开">▾</span>
-            <span>📜 日志</span>
+            <span>📜 活动日志</span>
             <select id="logFilter" class="log-filter" title="按类型筛选">
               <option value="">全部</option>
               <option value="added">新增</option>

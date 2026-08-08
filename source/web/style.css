@@ -190,6 +190,10 @@ body[data-theme="dark"] .privacy-btn-primary { background: linear-gradient(135de
 .fold-toggle:hover { background: var(--hover); color: var(--text); }
 .card.foldable.folded .fold-toggle { transform: rotate(-90deg); }
 .card.foldable.folded .card-collapsible { display: none; }
+.card.foldable .card-head { justify-content: flex-start; }
+.card.foldable .card-head > * { flex: 0 0 auto; }
+.card.foldable .card-head .log-filter,
+.card.foldable .card-head .btn { margin-left: auto; }
 .log-filter {
   margin-left: auto; padding: 4px 8px; font-size: 12px;
   border: 1px solid var(--card-border); border-radius: 6px;
