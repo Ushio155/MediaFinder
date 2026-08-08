@@ -22,6 +22,7 @@ const els = {
   sinceSelect: $('sinceSelect'),
   searchBtn: $('searchBtn'),
   searchMeta: $('searchMeta'),
+  kwClear: $('kwClear'),
   groupActions: $('groupActions'),
   expandAllBtn: $('expandAllBtn'),
   collapseAllBtn: $('collapseAllBtn'),
@@ -627,10 +628,19 @@ els.browseUp.addEventListener('click', () => { if (browseParent !== null) loadBr
 els.browseAdd.addEventListener('click', () => { if (browseCurrent) addPath(browseCurrent); });
 
 let kwTimer = null;
+function updateKwClear() { els.kwClear.hidden = !els.kwInput.value; }
 els.kwInput.addEventListener('input', () => {
+  updateKwClear();
   clearTimeout(kwTimer);
   kwTimer = setTimeout(doSearch, 320);
 });
+els.kwClear.addEventListener('click', () => {
+  els.kwInput.value = '';
+  updateKwClear();
+  els.kwInput.focus();
+  doSearch();
+});
+updateKwClear();
 els.typeSelect.addEventListener('change', doSearch);
 els.sinceSelect.addEventListener('change', doSearch);
 els.searchBtn.addEventListener('click', doSearch);

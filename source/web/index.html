@@ -100,7 +100,10 @@
       <section class="main">
         <div class="card search-card">
           <div class="search-row">
-            <input id="kwInput" type="text" placeholder="输入关键字搜索…" autocomplete="off" spellcheck="false">
+            <div class="search-input-wrap">
+              <input id="kwInput" type="text" placeholder="输入关键字搜索…" autocomplete="off" spellcheck="false">
+              <button type="button" class="search-clear" id="kwClear" title="清空" aria-label="清空" hidden>✕</button>
+            </div>
             <select id="typeSelect">
               <option value="">全部类型</option>
               <option value="video">🎥 视频</option>
