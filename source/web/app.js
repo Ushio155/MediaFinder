@@ -18,6 +18,8 @@ const els = {
   logNextBtn: $('logNextBtn'),
   logRunBtn: $('logRunBtn'),
   logToggle: $('logToggle'),
+  pathsToggle: $('pathsToggle'),
+  pathsCard: $('pathsCard'),
   kwInput: $('kwInput'),
   typeSelect: $('typeSelect'),
   sinceSelect: $('sinceSelect'),
@@ -58,6 +60,7 @@ els.themeBtn.addEventListener('click', () => {
 let toastTimer = null;
 let currentGroups = [];
 let currentCatCounts = {};
+let pendingLocatePath = null;
 let logDateStr = todayStr();
 function todayStr() {
   const d = new Date();
@@ -78,6 +81,28 @@ function logDetailText(l) {
   if (l.type === 'moved') return `旧: ${l.old} → 新: ${l.new}`;
   if (l.type === 'added') return l.new || '';
   return '未找到，可能已移入回收站或未监控目录';
+}
+function logLocatePath(l) {
+  if (l.type === 'gone') return l.old || null;
+  return l.new || l.old || null;
+}
+function locateInResults(path) {
+  if (!path) return;
+  const target = document.querySelector(`.result-item .thumb[data-path="${encodeURIComponent(path)}"]`);
+  if (target) {
+    const row = target.closest('.result-item');
+    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    row.classList.remove('flash-locate');
+    void row.offsetWidth;
+    row.classList.add('flash-locate');
+    setTimeout(() => row.classList.remove('flash-locate'), 2500);
+    return;
+  }
+  const name = path.split(/[\\/]/).pop();
+  if (!name) return;
+  pendingLocatePath = path;
+  els.kwInput.value = name;
+  doSearch();
 }
 function renderLogs(r) {
   renderLogDateLabel();
@@ -108,17 +133,30 @@ function renderLogs(r) {
     body.className = 'log-body';
     const name = document.createElement('div');
     name.className = 'log-name';
-    name.textContent = l.name;
+    if (l.folder) {
+      const fb = document.createElement('span');
+      fb.className = 'log-folder';
+      fb.textContent = l.folder;
+      fb.title = '所在分类文件夹';
+      name.appendChild(fb);
+    }
+    name.appendChild(document.createTextNode(l.name));
     const det = document.createElement('div');
     det.className = 'log-detail';
     det.textContent = logDetailText(l);
     det.title = logDetailText(l) + '（点击展开/收起）';
-    det.addEventListener('click', (e) => e.currentTarget.classList.toggle('expanded'));
+    det.addEventListener('click', (e) => { e.stopPropagation(); e.currentTarget.classList.toggle('expanded'); });
     body.appendChild(name);
     body.appendChild(det);
     li.appendChild(time);
     li.appendChild(badge);
     li.appendChild(body);
+    const loc = logLocatePath(l);
+    if (loc) {
+      li.classList.add('clickable');
+      li.title = '在搜索结果中定位此文件';
+      li.addEventListener('click', () => locateInResults(loc));
+    }
     els.logList.appendChild(li);
   });
 }
@@ -337,6 +375,7 @@ function renderResults(items, kw) {
   els.results.innerHTML = '';
   if (!items.length) {
     showEmpty(kw ? `未找到与 “${kw}” 匹配的文件` : '索引为空，请先点击左侧「重新扫描」', '📭');
+    pendingLocatePath = null;
     return;
   }
   const frag = document.createDocumentFragment();
@@ -406,6 +445,11 @@ function renderResults(items, kw) {
   });
   els.results.appendChild(frag);
   els.groupActions.style.display = currentGroups.length ? 'flex' : 'none';
+  if (pendingLocatePath) {
+    const p = pendingLocatePath;
+    pendingLocatePath = null;
+    setTimeout(() => locateInResults(p), 60);
+  }
 }
 
 function escapeHtml(s) {
@@ -639,3 +683,13 @@ els.logToggle.addEventListener('change', async () => {
     toast('操作失败', true);
   }
 });
+els.pathsToggle.addEventListener('click', () => {
+  els.pathsCard.classList.toggle('folded');
+  const folded = els.pathsCard.classList.contains('folded');
+  els.pathsToggle.textContent = folded ? '▸' : '▾';
+  try { localStorage.setItem('mf-paths-folded', folded ? '1' : '0'); } catch (e) {}
+});
+if (localStorage.getItem('mf-paths-folded') === '1') {
+  els.pathsCard.classList.add('folded');
+  els.pathsToggle.textContent = '▸';
+}

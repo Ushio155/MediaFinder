@@ -179,7 +179,31 @@ body[data-theme="dark"] {
 .privacy-btn-primary:hover { filter: brightness(1.1); background: linear-gradient(135deg, var(--amber), #f59e0b); }
 body[data-theme="dark"] .privacy-btn-primary { background: linear-gradient(135deg, var(--amber), #d97706); color: #1a1206; }
 
-.log-tools { display: flex; align-items: center; gap: 6px; }
+.log-tools { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; }
+.path-fold {
+  cursor: pointer; user-select: none; color: var(--text-dim);
+  font-size: 12px; width: 16px; display: inline-block; transition: transform 0.18s;
+}
+#pathsCard.folded .path-fold { transform: rotate(-90deg); }
+#pathsCard.folded #pathList,
+#pathsCard.folded #privacyNote,
+#pathsCard.folded .card-head ~ .hint { display: none; }
+.log-folder {
+  display: inline-block; font-size: 11px; font-weight: 600; color: var(--accent);
+  background: rgba(99, 102, 241, 0.1); border-radius: 4px; padding: 0 5px;
+  margin-right: 6px; vertical-align: 1px;
+}
+.log-item.clickable { cursor: pointer; transition: 0.15s; }
+.log-item.clickable:hover { border-color: var(--accent); background: var(--hover); }
+.result-item.flash-locate {
+  animation: flashLocate 2.4s ease;
+  border-color: var(--accent); box-shadow: 0 0 0 3px var(--ring);
+}
+@keyframes flashLocate {
+  0% { background: rgba(99, 102, 241, 0.22); }
+  60% { background: rgba(99, 102, 241, 0.12); }
+  100% { background: transparent; }
+}
 .log-date { font-size: 12px; color: var(--text-dim); cursor: pointer; user-select: none; }
 .log-switch { width: 34px; height: 19px; }
 .log-switch .slider::before { width: 13px; height: 13px; left: 2px; top: 2px; }

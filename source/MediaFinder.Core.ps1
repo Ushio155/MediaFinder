@@ -275,11 +275,26 @@ function Compare-MediaSnapshots($prev, $curr) {
     return @($events)
 }
 
+function Get-EventFolder($old, $new) {
+    $p = if ($new) { $new } else { $old }
+    if (-not $p) { return '' }
+    $parent = Split-Path -Parent $p
+    if (-not $parent) { return '' }
+    return (Split-Path -Leaf $parent)
+}
+
 function Write-MediaLog($cfg, $event) {
     if (-not $event) { return }
     $d = Get-LogDir $cfg
     $time = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
-    $line = [pscustomobject]@{ t = $time; type = [string]$event.Type; name = [string]$event.Name; old = [string]$event.Old; new = [string]$event.New } | ConvertTo-Json -Compress
+    $line = [pscustomobject]@{
+        t = $time
+        type = [string]$event.Type
+        name = [string]$event.Name
+        folder = [string](Get-EventFolder $event.Old $event.New)
+        old = [string]$event.Old
+        new = [string]$event.New
+    } | ConvertTo-Json -Compress
     try {
         Add-Content -LiteralPath (Join-Path $d ((Get-Date).ToString('yyyy-MM-dd') + '.log')) -Value $line -Encoding UTF8
     }
