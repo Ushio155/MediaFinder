@@ -654,13 +654,16 @@ function Initialize-EverythingConfig {
     try {
         if (Test-Path -LiteralPath $ini) {
             $content = [System.IO.File]::ReadAllText($ini)
-            if ($content -match 'run_as_admin\s*=\s*1') {
-                $fixed = $content -replace '(?m)^\s*run_as_admin\s*=\s*1\s*$', 'run_as_admin=0'
-                [System.IO.File]::WriteAllText($ini, $fixed, [System.Text.Encoding]::Unicode)
+            if ($content -match 'run_as_admin\s*=\s*1') { return }
+            if ($content -match '(?m)^\s*run_as_admin\s*=\s*[01]\s*$') {
+                $fixed = $content -replace '(?m)^\s*run_as_admin\s*=\s*[01]\s*$', 'run_as_admin=1'
+            } else {
+                $fixed = $content.TrimEnd() + "`r`nrun_as_admin=1`r`n"
             }
+            [System.IO.File]::WriteAllText($ini, $fixed, [System.Text.Encoding]::Unicode)
             return
         }
-        [System.IO.File]::WriteAllText($ini, "[Everything]`r`nrun_as_admin=0`r`n", [System.Text.Encoding]::Unicode)
+        [System.IO.File]::WriteAllText($ini, "[Everything]`r`nrun_as_admin=1`r`n", [System.Text.Encoding]::Unicode)
     }
     catch {}
 }
