@@ -611,12 +611,31 @@ public static class MFEs {
     private static extern void Everything_Exit();
     [DllImport("%DLL%")]
     private static extern bool Everything_IsDBLoaded();
+    [DllImport("kernel32.dll")]
+    private static extern IntPtr OpenProcess(uint a, bool inherit, uint pid);
+    [DllImport("advapi32.dll")]
+    private static extern bool OpenProcessToken(IntPtr h, uint a, out IntPtr t);
+    [DllImport("advapi32.dll")]
+    private static extern bool GetTokenInformation(IntPtr t, int c, out int i, uint l, out uint r);
+    [DllImport("kernel32.dll")]
+    private static extern bool CloseHandle(IntPtr h);
 
     private const uint REQ = 0x00000001 | 0x00000002 | 0x00000004 | 0x00000010 | 0x00000020 | 0x00000040;
     private const uint SORT_DM_DESC = 14;
 
     public static void Exit() {
         try { Everything_Exit(); } catch { }
+    }
+
+    public static bool IsElevated(int pid) {
+        IntPtr h = OpenProcess(0x1000, false, (uint)pid);
+        if (h == IntPtr.Zero) return false;
+        IntPtr tok;
+        if (!OpenProcessToken(h, 0x0008, out tok)) { CloseHandle(h); return false; }
+        int elev = 0; uint ret = 0;
+        GetTokenInformation(tok, 20, out elev, 4, out ret);
+        CloseHandle(tok); CloseHandle(h);
+        return elev == 1;
     }
 
     public static bool Available() {
@@ -715,12 +734,21 @@ function Remove-EverythingAutostart {
 }
 
 function Start-EmbeddedEverything {
-    if (Get-Process -Name Everything -ErrorAction SilentlyContinue) { return $false }
     $exe = Join-Path (Get-ScriptDir) 'Everything.exe'
     if (-not (Test-Path -LiteralPath $exe)) { return $false }
     try {
         Initialize-EverythingConfig
-        Start-Process -FilePath $exe -ArgumentList '-startup' -WindowStyle Minimized | Out-Null
+        $elev = Test-EverythingElevated
+        if ($elev -eq $true) { return $false }
+        if ($elev -eq $false) {
+            Write-Host "Everything 非管理员运行, 将重启为管理员..."
+            try { [MFEs]::Exit() } catch {}
+            Start-Sleep -Seconds 3
+            $left = @(Get-Process -Name Everything -ErrorAction SilentlyContinue)
+            foreach ($p in $left) { try { Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue } catch {} }
+            Start-Sleep -Seconds 1
+        }
+        Start-Process -FilePath $exe -ArgumentList '-startup' -Verb RunAs -WindowStyle Minimized | Out-Null
         return $true
     }
     catch { return $false }
@@ -768,6 +796,37 @@ function Initialize-EverythingProvider {
 function Test-EsHealth {
     if (-not $script:EsLoaded -or -not $script:EsAvailable) { return 'down' }
     try { return [string][MFEs]::Health() } catch { return 'down' }
+}
+
+function Test-EverythingElevated {
+    $procs = @(Get-Process -Name Everything -ErrorAction SilentlyContinue)
+    if ($procs.Count -eq 0) { return $null }
+    foreach ($p in $procs) {
+        try {
+            if (-not [MFEs]::IsElevated($p.Id)) { return $false }
+        } catch { return $false }
+    }
+    return $true
+}
+
+function Ensure-EverythingElevated {
+    $exe = Join-Path (Get-ScriptDir) 'Everything.exe'
+    if (-not (Test-Path -LiteralPath $exe)) { return $false }
+    try {
+        $elev = Test-EverythingElevated
+        if ($elev -eq $true) { return $true }
+        if ($elev -eq $false) {
+            Write-Host "检测到非管理员 Everything 实例, 正在退出并以管理员身份重启..."
+            try { [MFEs]::Exit() } catch {}
+            Start-Sleep -Seconds 3
+            $left = @(Get-Process -Name Everything -ErrorAction SilentlyContinue)
+            foreach ($p in $left) { try { Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue } catch {} }
+            Start-Sleep -Seconds 1
+        }
+        Start-Process -FilePath $exe -ArgumentList '-startup' -Verb RunAs -WindowStyle Minimized | Out-Null
+        return $true
+    }
+    catch { return $false }
 }
 
 function Invoke-ESQuery {

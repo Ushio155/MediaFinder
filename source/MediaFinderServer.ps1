@@ -284,6 +284,13 @@ $script:LogMonitorScript = {
             $cfg = Get-Config $cfgPath
             $extMap = Build-ExtMap $cfg
             if ($cfg.logEnabled -eq $false) { continue }
+            $elev = Test-EverythingElevated
+            if ($elev -eq $false) {
+                Write-Host "Everything 非管理员运行, 正在重启为管理员..."
+                Start-EmbeddedEverything
+                Start-Sleep -Seconds 3
+                continue
+            }
             $h = [string][MFEs]::Health()
             if ($h -ne 'ok') {
                 if ($h -eq 'down') {
