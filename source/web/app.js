@@ -284,8 +284,13 @@ async function doScan() {
   els.scanHint.textContent = '正在扫描配置目录…';
   try {
     const r = await api('/api/scan', {});
-    els.scanHint.textContent = r.message || ('完成: ' + r.count + ' 个文件');
-    toast('扫描完成，共 ' + r.count + ' 个媒体文件');
+    if (!r.ok) {
+      els.scanHint.textContent = '扫描失败: ' + (r.error || '未知错误');
+      toast('扫描失败: ' + (r.error || '未知错误'), true);
+    } else {
+      els.scanHint.textContent = r.message || ('完成: ' + r.count + ' 个文件');
+      toast('扫描完成，共 ' + r.count + ' 个媒体文件');
+    }
     fetchStatus(true);
   } catch (e) {
     els.scanHint.textContent = '扫描失败';

@@ -759,14 +759,18 @@ function ConvertFrom-ESLine {
     [int64]::TryParse($p[1], [ref]$size) | Out-Null
     [int64]::TryParse($p[2], [ref]$dm) | Out-Null
     [int64]::TryParse($p[3], [ref]$dc) | Out-Null
+    $lwt = [DateTime]::MinValue
+    if ($dm -ne 0) { try { $lwt = [DateTime]::FromFileTime($dm) } catch {} }
+    $ct = [DateTime]::MinValue
+    if ($dc -ne 0) { try { $ct = [DateTime]::FromFileTime($dc) } catch {} }
     return [pscustomobject]@{
         Name = Split-Path -Leaf $path
         FullPath = $path
         Extension = $ext
         Type = $extMap[$ext]
         Size = $size
-        LastWriteTime = if ($dm -ne 0) { [DateTime]::FromFileTime($dm) } else { [DateTime]::MinValue }
-        CreatedTime = if ($dc -ne 0) { [DateTime]::FromFileTime($dc) } else { [DateTime]::MinValue }
+        LastWriteTime = $lwt
+        CreatedTime = $ct
     }
 }
 
