@@ -788,6 +788,21 @@ function Build-ESEntrySearch {
     return ($parts -join ' ')
 }
 
+function Find-EsCurrentPath {
+    param($Name, $extMap, $watchPaths)
+    try {
+        foreach ($line in @(Invoke-ESQuery ('filename:"' + ($Name -replace '"', '') + '"'))) {
+            $r = ConvertFrom-ESLine $line $extMap
+            if (-not $r -or $r.Name -ne $Name) { continue }
+            if (-not (Test-Path -LiteralPath $r.FullPath)) { continue }
+            foreach ($wp in @($watchPaths)) {
+                if ($r.FullPath.StartsWith($wp, [StringComparison]::OrdinalIgnoreCase)) { return $r }
+            }
+        }
+    } catch {}
+    return $null
+}
+
 function Search-Everything {
     param($cfg, $extMap, $entries, $Keyword, $Type, $SinceDate, $Limit)
     $results = New-Object System.Collections.ArrayList
@@ -811,7 +826,20 @@ function Search-Everything {
             }
         }
     }
-    $sorted = @($results | Sort-Object LastWriteTime -Descending)
+    $watchPaths = @($entries | ForEach-Object { $_.Path })
+    $kept = New-Object System.Collections.ArrayList
+    $keptPaths = @{}
+    foreach ($f in @($results)) {
+        if (-not (Test-Path -LiteralPath $f.FullPath)) {
+            $f = Find-EsCurrentPath $f.Name $extMap $watchPaths
+            if (-not $f) { continue }
+        }
+        $k = $f.FullPath.ToLower()
+        if ($keptPaths.ContainsKey($k)) { continue }
+        $keptPaths[$k] = $true
+        [void]$kept.Add($f)
+    }
+    $sorted = @($kept | Sort-Object LastWriteTime -Descending)
     if ($null -ne $Limit -and $Limit -gt 0) { $sorted = @($sorted | Select-Object -First $Limit) }
     return $sorted
 }
@@ -836,7 +864,6 @@ function Invoke-ESFullScan {
     $start = Get-Date
     $entries = Resolve-WatchConfig $cfg
     $list = @(Search-Everything $cfg $extMap $entries $null $null $null $null)
-    $list = @($list | Where-Object { Test-Path -LiteralPath $_.FullPath })
     $arr = New-Object System.Collections.ArrayList
     foreach ($x in $list) { [void]$arr.Add($x) }
     Save-Index (Get-IndexFile $cfg) $arr
