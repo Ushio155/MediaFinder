@@ -25,6 +25,7 @@ class MediaFinderLauncher
         new[]{"MF.web.index.html","web\\index.html"},
         new[]{"MF.web.style.css","web\\style.css"},
         new[]{"MF.web.app.js","web\\app.js"},
+        new[]{"MF.web.i18n.js","web\\i18n.js"},
     };
 
     [STAThread]

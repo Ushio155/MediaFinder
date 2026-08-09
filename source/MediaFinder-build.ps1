@@ -35,7 +35,7 @@ $resFiles = @(
     'MediaFinder.cmd', 'MediaFinder-web.cmd', 'MediaFinder-web.vbs', 'MediaFinder-web-visible.cmd', 'MediaFinder-stop.cmd',
     'THIRD-PARTY.txt', 'MediaFinder-README.txt',
     'MediaFinder.config.json', 'MediaFinder.ico',
-    'web\index.html', 'web\style.css', 'web\app.js'
+    'web\index.html', 'web\style.css', 'web\app.js', 'web\i18n.js'
 )
 foreach ($rf in $resFiles) {
     $rp = Join-Path $dir $rf

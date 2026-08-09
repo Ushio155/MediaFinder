@@ -533,6 +533,7 @@ function Handle-Request($ctx) {
     }
     if ($path -eq '/style.css') { Send-File $ctx (Join-Path $script:WebDir 'style.css') 'text/css; charset=utf-8'; return }
     if ($path -eq '/app.js') { Send-File $ctx (Join-Path $script:WebDir 'app.js') 'application/javascript; charset=utf-8'; return }
+    if ($path -eq '/i18n.js') { Send-File $ctx (Join-Path $script:WebDir 'i18n.js') 'application/javascript; charset=utf-8'; return }
     if ($path -eq '/favicon.ico') { Send-Empty $ctx 204; return }
 
     if ($path -eq '/api/status') {
