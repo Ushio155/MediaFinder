@@ -290,6 +290,7 @@ async function doScan() {
     } else {
       els.scanHint.textContent = r.message || ('完成: ' + r.count + ' 个文件');
       toast('扫描完成，共 ' + r.count + ' 个媒体文件');
+      doSearch();
     }
     fetchStatus(true);
   } catch (e) {
