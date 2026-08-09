@@ -178,6 +178,30 @@ const I18N = {
   }
 };
 
+const CAT_NAME = {
+  en: {
+    '明日方舟终末地': 'Arknights EndField',
+    '鸣潮': 'Wuthering Waves',
+    'obs素材': 'OBS Media',
+    '游戏截图': 'Game Screenshots',
+    '其他': 'Other',
+  }
+};
+
+function tCat(name) {
+  if (!name) return name;
+  return currentLang === 'en' && CAT_NAME.en[name] != null ? CAT_NAME.en[name] : name;
+}
+
+function translateScanMsg(msg) {
+  if (!msg || currentLang !== 'en') return msg;
+  return String(msg)
+    .replace(/完成: 共 (\d+) 个媒体文件, 用时 ([\d.]+) 秒 \(Everything 实时索引\)/, 'Done: $1 media files in $2s (Everything live index)')
+    .replace(/完成: 共 (\d+) 个媒体文件, 用时 ([\d.]+) 秒/, 'Done: $1 media files in $2s')
+    .replace(/警告: Everything 返回 0 个文件, 已保留原索引 \((\d+) 个\)。请检查 Everything 是否正常 \(可能需要管理员权限\)/, 'Warning: Everything returned 0 files; kept previous index ($1). Check Everything status (admin rights may be needed)')
+    .replace(/ \(日志: (\d+) 个新事件\)/, ' (logs: $1 new events)');
+}
+
 function detectLang() {
   try {
     const saved = localStorage.getItem('mf-lang');

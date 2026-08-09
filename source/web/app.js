@@ -317,7 +317,7 @@ async function doScan() {
       els.scanHint.textContent = t('扫描失败: ') + (r.error || t('未知错误'));
       toast(t('扫描失败: ') + (r.error || t('未知错误')), true);
     } else {
-      els.scanHint.textContent = r.message || (t('完成: ') + r.count + t(' 个文件'));
+      els.scanHint.textContent = translateScanMsg(r.message) || (t('完成: ') + r.count + t(' 个文件'));
       if (r.protected) {
         toast(t('扫描异常: 已保留原索引，请检查 Everything 状态'), true);
       } else {
@@ -453,13 +453,13 @@ function renderResults(items, kw) {
   const groups = new Map();
   currentGroups = [];
   items.forEach((it) => {
-    const cat = it.category || t('其他');
+    const cat = it.category || '其他';
     if (!groups.has(cat)) groups.set(cat, []);
     groups.get(cat).push(it);
   });
   const order = [...groups.keys()];
-  const other = order.indexOf(t('其他'));
-  if (other >= 0) { order.splice(other, 1); order.push(t('其他')); }
+  const other = order.indexOf('其他');
+  if (other >= 0) { order.splice(other, 1); order.push('其他'); }
   order.forEach((cat) => {
     const groupItems = groups.get(cat);
     const group = document.createElement('div');
@@ -469,7 +469,7 @@ function renderResults(items, kw) {
     header.className = 'group-header';
     header.title = t('点击折叠/展开');
     const realCount = currentCatCounts[cat] != null ? currentCatCounts[cat] : groupItems.length;
-    header.innerHTML = `<span class="chevron">▾</span><span>${escapeHtml(cat)}</span><span class="group-count" title="${t('共 ')} ${realCount} ${t(' 个')}">${realCount}</span>`;
+    header.innerHTML = `<span class="chevron">▾</span><span>${escapeHtml(tCat(cat))}</span><span class="group-count" title="${t('共 ')} ${realCount} ${t(' 个')}">${realCount}</span>`;
     const body = document.createElement('div');
     body.className = 'group-items';
     groupItems.forEach((it) => {
