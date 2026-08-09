@@ -906,7 +906,13 @@ try {
             Handle-Request $ctx
         }
         catch {
-            Log "处理请求异常: $($_.Exception.Message)"
+            $ex = $_.Exception
+            $silent = $false
+            while ($ex) {
+                if ($ex -is [System.IO.IOException] -or $ex -is [System.Net.Sockets.SocketException] -or $ex -is [System.Net.HttpListenerException]) { $silent = $true; break }
+                $ex = $ex.InnerException
+            }
+            if (-not $silent) { Log "处理请求异常: $($_.Exception.Message)" }
             try { $ctx.Response.Close() } catch {}
         }
     }

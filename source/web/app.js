@@ -389,6 +389,7 @@ async function doSearch() {
   els.searchMeta.textContent = '搜索中…';
   try {
     const r = await api('/api/search', { keyword: kw, type, since, perCat: 100 });
+    liveSearchKey = null;
     currentCatCounts = {};
     (r.categories || []).forEach((c) => { currentCatCounts[c.name] = c.count; });
     els.searchMeta.textContent = r.total ? `共找到 ${r.total} 个文件（每分类显示前 100 个）` : '';
@@ -399,6 +400,28 @@ async function doSearch() {
   } finally {
     els.searchBtn.disabled = false;
   }
+}
+
+let liveSearchKey = null;
+let liveSearchBusy = false;
+async function liveRefreshSearch() {
+  if (currentIndexMode !== 'everything' || liveSearchBusy || els.searchBtn.disabled) return;
+  liveSearchBusy = true;
+  try {
+    const kw = els.kwInput.value.trim();
+    const type = els.typeSelect.value;
+    const since = els.sinceSelect.value;
+    const r = await api('/api/search', { keyword: kw, type, since, perCat: 100 });
+    const key = JSON.stringify([r.total, r.categories]);
+    if (key !== liveSearchKey) {
+      liveSearchKey = key;
+      currentCatCounts = {};
+      (r.categories || []).forEach((c) => { currentCatCounts[c.name] = c.count; });
+      els.searchMeta.textContent = r.total ? `共找到 ${r.total} 个文件（每分类显示前 100 个）` : '';
+      renderResults(r.results || [], kw);
+    }
+  } catch (e) { /* 静默: 网络/临时错误不打扰 */ }
+  finally { liveSearchBusy = false; }
 }
 
 function renderResults(items, kw) {
@@ -767,8 +790,8 @@ els.quitBtn.addEventListener('click', async () => {
   }
 });
 
-fetchStatus();
-setInterval(() => fetchStatus(true), 5000);
+  fetchStatus();
+  setInterval(() => { fetchStatus(true); liveRefreshSearch(); }, 5000);
 fetchLogs();
 setInterval(() => { if (logDateStr === todayStr()) fetchLogs(); }, 5000);
 els.logPrevBtn.addEventListener('click', () => shiftLogDate(-1));
