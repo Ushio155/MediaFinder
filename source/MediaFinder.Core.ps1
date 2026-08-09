@@ -308,6 +308,7 @@ function Sync-MediaLogs($cfg, $extMap, $useEverything) {
         try { $prev = @(Get-Content -LiteralPath $snapPath -Raw -Encoding UTF8 | ConvertFrom-Json | ForEach-Object { $_ }) } catch { $prev = @() }
     }
     $curr = @(Get-MediaSnapshot $cfg $extMap $useEverything)
+    $curr = @($curr | Where-Object { Test-Path -LiteralPath $_.FullPath })
     $currMap = @{}
     foreach ($c in @($curr)) {
         if ($c.FullPath) { $currMap[$c.FullPath.ToLowerInvariant()] = $true }
@@ -835,6 +836,7 @@ function Invoke-ESFullScan {
     $start = Get-Date
     $entries = Resolve-WatchConfig $cfg
     $list = @(Search-Everything $cfg $extMap $entries $null $null $null $null)
+    $list = @($list | Where-Object { Test-Path -LiteralPath $_.FullPath })
     $arr = New-Object System.Collections.ArrayList
     foreach ($x in $list) { [void]$arr.Add($x) }
     Save-Index (Get-IndexFile $cfg) $arr
