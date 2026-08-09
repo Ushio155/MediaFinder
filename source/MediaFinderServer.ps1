@@ -284,6 +284,19 @@ $script:LogMonitorScript = {
             $cfg = Get-Config $cfgPath
             $extMap = Build-ExtMap $cfg
             if ($cfg.logEnabled -eq $false) { continue }
+            $h = [string][MFEs]::Health()
+            if ($h -ne 'ok') {
+                if ($h -eq 'down') {
+                    Write-Host "Everything 不可用, 尝试重启..."
+                    Start-EmbeddedEverything
+                    Start-Sleep -Seconds 3
+                    $h = [string][MFEs]::Health()
+                }
+                if ($h -ne 'ok') {
+                    Write-Host "Everything 状态: $h, 跳过本次日志同步"
+                    continue
+                }
+            }
             [void](Sync-MediaLogs $cfg $extMap $true)
         }
         catch {}
@@ -516,9 +529,17 @@ function Handle-Request($ctx) {
     if ($path -eq '/favicon.ico') { Send-Empty $ctx 204; return }
 
     if ($path -eq '/api/status') {
+        $es = $null
+        if ($script:IndexMode -eq 'everything') {
+            $es = [pscustomobject]@{
+                state = Test-EsHealth
+                building = ((Test-EsHealth) -eq 'building')
+            }
+        }
         Send-Json $ctx ([pscustomobject]@{
             ok = $true
             indexMode = $script:IndexMode
+            es = $es
             watchPaths = @((Resolve-WatchConfig $cfg) | Where-Object { Test-Path -LiteralPath $_.Path } | ForEach-Object { $_.Path })
             privacyDirs = @(Find-PrivacyDirs $cfg | ForEach-Object { $_ })
             index = Get-IndexStats $cfg
@@ -695,6 +716,7 @@ function Handle-Request($ctx) {
                 count = $r.Count
                 seconds = $r.Seconds
                 message = $r.Message
+                protected = [bool]$r.Protected
             })
         }
         catch {

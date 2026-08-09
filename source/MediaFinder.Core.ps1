@@ -309,6 +309,10 @@ function Sync-MediaLogs($cfg, $extMap, $useEverything) {
     }
     $curr = @(Get-MediaSnapshot $cfg $extMap $useEverything)
     $curr = @($curr | Where-Object { Test-Path -LiteralPath $_.FullPath })
+    if (@($curr).Count -eq 0 -and @($prev).Count -gt 0) {
+        Write-Host "Sync-MediaLogs: 快照为空但上次有 $($prev.Count) 个文件, 跳过本次同步 (Everything 可能不可用或正在建库)"
+        return @()
+    }
     $currMap = @{}
     foreach ($c in @($curr)) {
         if ($c.FullPath) { $currMap[$c.FullPath.ToLowerInvariant()] = $true }
@@ -605,6 +609,8 @@ public static class MFEs {
     private static extern bool Everything_GetResultDateCreated(uint i, out long t);
     [DllImport("%DLL%")]
     private static extern void Everything_Exit();
+    [DllImport("%DLL%")]
+    private static extern bool Everything_IsDBLoaded();
 
     private const uint REQ = 0x00000001 | 0x00000002 | 0x00000004 | 0x00000010 | 0x00000020 | 0x00000040;
     private const uint SORT_DM_DESC = 14;
@@ -620,6 +626,20 @@ public static class MFEs {
             Everything_SetRequestFlags(REQ);
             return Everything_QueryW(true);
         } catch { return false; }
+    }
+
+    public static bool DBLoaded() {
+        try { return Everything_IsDBLoaded(); } catch { return false; }
+    }
+
+    public static string Health() {
+        try {
+            Everything_SetSearchW("");
+            Everything_SetMax(1);
+            Everything_SetRequestFlags(REQ);
+            if (!Everything_QueryW(true)) return "down";
+            return Everything_IsDBLoaded() ? "ok" : "building";
+        } catch { return "down"; }
     }
 
     public static string[] Query(string search) {
@@ -745,6 +765,11 @@ function Initialize-EverythingProvider {
     return $script:EsAvailable
 }
 
+function Test-EsHealth {
+    if (-not $script:EsLoaded -or -not $script:EsAvailable) { return 'down' }
+    try { return [string][MFEs]::Health() } catch { return 'down' }
+}
+
 function Invoke-ESQuery {
     param([string]$Search)
     if (-not $script:EsAvailable) { return @() }
@@ -867,6 +892,20 @@ function Invoke-ESFullScan {
     $start = Get-Date
     $entries = Resolve-WatchConfig $cfg
     $list = @(Search-Everything $cfg $extMap $entries $null $null $null $null)
+    if (@($list).Count -eq 0) {
+        $old = @(Load-Index (Get-IndexFile $cfg))
+        if (@($old).Count -gt 0) {
+            $secs = ((Get-Date) - $start).TotalSeconds
+            $msg = "警告: Everything 返回 0 个文件, 已保留原索引 ($($old.Count) 个)。请检查 Everything 是否正常 (可能需要管理员权限)"
+            Write-Host $msg
+            return [pscustomobject]@{
+                Count = @($old).Count
+                Seconds = [math]::Round($secs, 2)
+                Message = $msg
+                Protected = $true
+            }
+        }
+    }
     $arr = New-Object System.Collections.ArrayList
     foreach ($x in $list) { [void]$arr.Add($x) }
     Save-Index (Get-IndexFile $cfg) $arr
@@ -877,5 +916,6 @@ function Invoke-ESFullScan {
         Count = $arr.Count
         Seconds = [math]::Round($secs, 2)
         Message = $msg
+        Protected = $false
     }
 }

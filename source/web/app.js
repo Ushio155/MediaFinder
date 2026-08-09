@@ -215,11 +215,22 @@ function fmtTime(iso) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-function setMonitorUI(state, indexMode) {
+function setMonitorUI(state, indexMode, es) {
   if (indexMode === 'everything') {
+    const esState = es && es.state ? es.state : 'ok';
     els.monitorBadge.textContent = '⚡ 实时索引';
     els.monitorBadge.className = 'badge badge-live';
-    els.monitorText.textContent = 'Everything 实时索引已启用';
+    if (esState === 'down') {
+      els.monitorBadge.textContent = '⚠ 索引异常';
+      els.monitorBadge.className = 'badge badge-off';
+      els.monitorText.textContent = 'Everything 不可用（进程未运行或权限不足），扫描/搜索可能返回空结果';
+    } else if (esState === 'building') {
+      els.monitorBadge.textContent = '⏳ 建库中';
+      els.monitorBadge.className = 'badge badge-live';
+      els.monitorText.textContent = 'Everything 正在构建索引，结果可能不完整，请稍候';
+    } else {
+      els.monitorText.textContent = 'Everything 实时索引已启用';
+    }
     els.monitorToggle.checked = true;
     els.monitorToggle.disabled = true;
     $('monitorCardTitle').textContent = '⚡ 实时索引';
@@ -242,7 +253,7 @@ async function fetchStatus(silent) {
     currentIndexMode = s.indexMode || 'ps';
     els.indexCount.textContent = (s.index && s.index.count != null) ? s.index.count : 0;
     els.indexTime.textContent = (s.index && s.index.live) ? '实时更新' : fmtTime(s.index && s.index.modified);
-    setMonitorUI(s.monitor, currentIndexMode);
+    setMonitorUI(s.monitor, currentIndexMode, s.es);
     renderPaths(s.watchPaths || []);
     renderPrivacyDirs(s.privacyDirs || []);
     return s;
@@ -289,7 +300,11 @@ async function doScan() {
       toast('扫描失败: ' + (r.error || '未知错误'), true);
     } else {
       els.scanHint.textContent = r.message || ('完成: ' + r.count + ' 个文件');
-      toast('扫描完成，共 ' + r.count + ' 个媒体文件');
+      if (r.protected) {
+        toast('扫描异常: 已保留原索引，请检查 Everything 状态', true);
+      } else {
+        toast('扫描完成，共 ' + r.count + ' 个媒体文件');
+      }
       doSearch();
     }
     fetchStatus(true);
