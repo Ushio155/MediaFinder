@@ -168,11 +168,18 @@ function Read-Body($ctx) {
 
 function Get-IndexStats($cfg) {
     if ($script:IndexMode -eq 'everything') {
-        $extMap = Build-ExtMap $cfg
+        $idxPath = Get-IndexFile $cfg
+        $count = 0
+        $modified = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
+        if (Test-Path -LiteralPath $idxPath) {
+            $f = Get-Item -LiteralPath $idxPath
+            $modified = $f.LastWriteTime.ToString("yyyy-MM-dd HH:mm:ss")
+            try { $count = @(Load-Index $idxPath).Count } catch { }
+        }
         return [pscustomobject]@{
-            count = (Get-EverythingCount $cfg $extMap)
-            modified = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
-            file = $null
+            count = $count
+            modified = $modified
+            file = $idxPath
             live = $true
         }
     }

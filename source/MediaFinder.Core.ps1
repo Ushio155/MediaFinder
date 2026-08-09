@@ -812,6 +812,7 @@ function Search-Everything {
         }
     }
     $sorted = @($results | Sort-Object LastWriteTime -Descending)
+    $sorted = @($sorted | Where-Object { Test-Path -LiteralPath $_.FullPath })
     if ($null -ne $Limit -and $Limit -gt 0) { $sorted = @($sorted | Select-Object -First $Limit) }
     return $sorted
 }
@@ -836,7 +837,6 @@ function Invoke-ESFullScan {
     $start = Get-Date
     $entries = Resolve-WatchConfig $cfg
     $list = @(Search-Everything $cfg $extMap $entries $null $null $null $null)
-    $list = @($list | Where-Object { Test-Path -LiteralPath $_.FullPath })
     $arr = New-Object System.Collections.ArrayList
     foreach ($x in $list) { [void]$arr.Add($x) }
     Save-Index (Get-IndexFile $cfg) $arr
