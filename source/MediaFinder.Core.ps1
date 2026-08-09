@@ -308,6 +308,17 @@ function Sync-MediaLogs($cfg, $extMap, $useEverything) {
         try { $prev = @(Get-Content -LiteralPath $snapPath -Raw -Encoding UTF8 | ConvertFrom-Json | ForEach-Object { $_ }) } catch { $prev = @() }
     }
     $curr = @(Get-MediaSnapshot $cfg $extMap $useEverything)
+    $currMap = @{}
+    foreach ($c in @($curr)) {
+        if ($c.FullPath) { $currMap[$c.FullPath.ToLowerInvariant()] = $true }
+    }
+    foreach ($p in @($prev)) {
+        if ($p.FullPath -and -not $currMap.ContainsKey($p.FullPath.ToLowerInvariant())) {
+            if (Test-Path -LiteralPath $p.FullPath) {
+                $curr += $p
+            }
+        }
+    }
     try {
         $tmp = "$snapPath.tmp"
         @($curr) | ConvertTo-Json -Depth 3 | Set-Content -LiteralPath $tmp -Encoding UTF8
