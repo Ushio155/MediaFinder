@@ -85,7 +85,7 @@ const logTypeLabel = { added: '新增', moved: '移动', gone: '消失' };
 function logDetailText(l) {
   if (l.type === 'moved') return `旧: ${l.old} → 新: ${l.new}`;
   if (l.type === 'added') return l.new || '';
-  return '未找到，可能已移入回收站或未监控目录';
+  return l.old || '未找到，可能已移入回收站或未监控目录';
 }
 function logLocatePath(l) {
   if (l.type === 'gone') return l.old || null;
@@ -117,7 +117,7 @@ function renderLogs(r) {
   const hintParts = [];
   if (r && r.lastCheck) hintParts.push('上次检查 ' + r.lastCheck);
   hintParts.push('实时更新');
-  els.logHint.textContent = hintParts.join(' · ') + ' · 检测新增/移动/消失的媒体文件';
+  els.logHint.textContent = hintParts.join(' · ') + ' · 检测新增/移动/消失的媒体文件（可能移入回收站或未监控目录）';
   els.logList.innerHTML = '';
   const allLogs = (r && r.logs) || [];
   const logs = logFilterVal ? allLogs.filter((l) => l.type === logFilterVal) : allLogs;
@@ -581,6 +581,7 @@ async function removePath(path) {
   if (!confirm('确定移除该目录吗？\n' + path)) return;
   try {
     const r = await api('/api/config/remove', { path });
+    if (!r.ok) { toast('移除失败: ' + (r.error || ''), true); return; }
     toast('已移除目录');
     await fetchStatus(true);
     doScan();
@@ -591,7 +592,7 @@ async function removePath(path) {
 async function ignorePrivacy(path) {
   try {
     const r = await api('/api/config/ignore-privacy', { path });
-    toast('已记住，不再提示该目录');
+    if (r.ok) toast('已记住，不再提示该目录');
     renderPrivacyDirs(r.privacyDirs || []);
   } catch (e) {
     toast('操作失败', true);
@@ -668,7 +669,8 @@ async function deleteAllLogs() {
 function renderPrivacyDirs(dirs) {
   const box = els.privacyNote;
   box.innerHTML = '';
-  if (!dirs || !dirs.length) return;
+  if (!dirs || !dirs.length) { box.className = ''; return; }
+  box.className = 'privacy-note';
   const kinds = [...new Set(dirs.map((d) => d.kind))].join('/');
   const title = document.createElement('div');
   title.className = 'privacy-note-title';
